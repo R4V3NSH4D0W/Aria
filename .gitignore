@@ -29,3 +29,6 @@ src-tauri/target/
 # Env
 .env
 .env.*
+
+# Documentation
+docs/
