@@ -67,5 +67,18 @@ For deeper technical insights, please refer to the files in the [`/docs`](./docs
 
 ## 📄 License
 
-MIT License
+This project is currently distributed under the MIT License.
+
+## ⚠️ Usage Notice
+
+Aria is intended for personal, non-commercial use only.
+
+- Do not redistribute, resell, or rebrand this app without reviewing the legal and licensing implications first.
+- You are responsible for making sure your use of the app complies with applicable laws, copyright rules, and YouTube's terms.
+- The app is provided as-is, without warranty of any kind.
+- This notice is informational only and does not override the MIT License.
+- This notice is not legal advice and does not guarantee protection from legal claims, takedowns, or enforcement actions.
+
+If you want enforceable personal-use-only restrictions, you need to change the license and get legal advice before distributing builds.
+
 # Aria
