@@ -31,7 +31,9 @@ jobs:
         run: npm install -g pnpm
 
       - name: install frontend dependencies
-        run: pnpm install
+        run: |
+          pnpm config set policies.minimum-release-age 0
+          pnpm install
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
