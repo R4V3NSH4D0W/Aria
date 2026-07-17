@@ -40,17 +40,6 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Bump version from tag
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Using version: $VERSION"
-
-          npm version "$VERSION" --no-git-tag-version
-
-          sed -i.bak -E 's/^version = ".*"/version = "'"$VERSION"'"/' src-tauri/Cargo.toml || true
-          rm -f src-tauri/Cargo.toml.bak
-
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -69,7 +58,6 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      # ⭐ Rust cache
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
