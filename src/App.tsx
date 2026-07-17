@@ -185,29 +185,42 @@ export default function App() {
   };
 
   const handleNext = () => {
-    if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(
+    if (!currentTrack) return;
+
+    const playbackList = queue.length > 0 ? queue : getActiveTracks();
+    if (playbackList.length === 0) return;
+
+    const currentIndex = playbackList.findIndex(
       (t) => t.videoId === currentTrack.videoId,
     );
+
     let nextIndex = currentIndex + 1;
     if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * queue.length);
-    } else if (nextIndex >= queue.length) {
+      nextIndex = Math.floor(Math.random() * playbackList.length);
+    } else if (currentIndex === -1 || nextIndex >= playbackList.length) {
       nextIndex = 0; // Loop back to start
     }
-    playTrack(queue[nextIndex]);
+
+    playTrack(playbackList[nextIndex]);
   };
 
   const handlePrev = () => {
-    if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(
+    if (!currentTrack) return;
+
+    const playbackList = queue.length > 0 ? queue : getActiveTracks();
+    if (playbackList.length === 0) return;
+
+    const currentIndex = playbackList.findIndex(
       (t) => t.videoId === currentTrack.videoId,
     );
-    let prevIndex = currentIndex === -1 ? queue.length - 1 : currentIndex - 1;
+    let prevIndex =
+      currentIndex === -1 ? playbackList.length - 1 : currentIndex - 1;
+
     if (prevIndex < 0) {
-      prevIndex = queue.length - 1;
+      prevIndex = playbackList.length - 1;
     }
-    playTrack(queue[prevIndex]);
+
+    playTrack(playbackList[prevIndex]);
   };
 
   useEffect(() => {
