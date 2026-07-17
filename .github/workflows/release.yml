@@ -16,7 +16,11 @@ jobs:
         include:
           - platform: macos-latest
             args: --target aarch64-apple-darwin
+
           - platform: windows-latest
+            args: ""
+
+          - platform: ubuntu-22.04
             args: ""
 
     runs-on: ${{ matrix.platform }}
@@ -36,30 +40,57 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Show pnpm configuration
+      - name: Bump version from tag
+        shell: bash
         run: |
-          pnpm -v
-          node -v
-          cat .npmrc || true
-          pnpm config get minimumReleaseAge
-          pnpm config list
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Using version: $VERSION"
+
+          npm version "$VERSION" --no-git-tag-version
+
+          sed -i.bak -E 's/^version = ".*"/version = "'"$VERSION"'"/' src-tauri/Cargo.toml || true
+          rm -f src-tauri/Cargo.toml.bak
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Rust stable
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Build and Publish Tauri App
+      # ⭐ Rust cache
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: Build and Publish
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: aria-v__VERSION__
           releaseName: "Aria v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
+          releaseBody: |
+            ## 🚀 Aria v__VERSION__
+
+            ### Downloads
+            - 🍎 macOS
+            - 🪟 Windows
+            - 🐧 Linux
+
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
