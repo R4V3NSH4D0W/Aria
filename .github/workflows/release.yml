@@ -1,41 +1,51 @@
-name: 'publish'
+name: publish
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   publish-tauri:
     permissions:
       contents: write
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest' # for Mac
-            args: '--target aarch64-apple-darwin'
-          - platform: 'windows-latest' # for Windows Desktop
-            args: ''
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+          - platform: windows-latest
+            args: ""
 
     runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: setup node
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 22
+          cache: pnpm
 
-      - name: install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
 
-      - name: install frontend dependencies
+      - name: Configure pnpm
         run: |
-          echo "policies.minimum-release-age=0" >> .npmrc
-          pnpm install
+          pnpm config set minimumReleaseAge 0
+          echo "minimumReleaseAge: $(pnpm config get minimumReleaseAge)"
+          pnpm config list
 
-      - name: install Rust stable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
@@ -45,9 +55,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: aria-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'Aria v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          tagName: aria-v__VERSION__
+          releaseName: "Aria v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
