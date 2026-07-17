@@ -20,6 +20,7 @@ Aria is a sleek, modern, cross-platform desktop music player built with **Tauri*
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js (v18+)
 - pnpm
 - Rust and Cargo
@@ -28,20 +29,24 @@ Aria is a sleek, modern, cross-platform desktop music player built with **Tauri*
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd demo_tauri_app
    ```
 
 2. **Install dependencies**
+
    ```bash
    pnpm install
    ```
 
 3. **Run in Development Mode**
+
    ```bash
    pnpm tauri dev
    ```
+
    This will start the Vite dev server and open the Aria desktop window.
 
 4. **Build for Production**
@@ -53,6 +58,7 @@ Aria is a sleek, modern, cross-platform desktop music player built with **Tauri*
 ## 🎨 Design Philosophy
 
 Aria is designed to be visually stunning. We prioritize:
+
 - **Aesthetics**: Curated dark palettes (`#08090a`, `#12151b`) with subtle indigo and pink accents.
 - **Interactivity**: Custom linear-gradient sliders for volume and playback progress, hover effects, and smooth transitions.
 - **Focus**: No clutter, no ads—just you and your music.
@@ -60,6 +66,7 @@ Aria is designed to be visually stunning. We prioritize:
 ## 📚 Documentation
 
 For deeper technical insights, please refer to the files in the [`/docs`](./docs) folder:
+
 - [**Architecture**](./docs/ARCHITECTURE.md): Learn about the system design and how the React frontend communicates with the Rust backend.
 - [**YouTube API Integration**](./docs/YOUTUBE_API.md): Details on how Aria directly fetches YouTube streams and bypasses playback restrictions.
 - [**Search Parsing**](./docs/SEARCH_PARSING.md): Explanation of how Aria parses and filters YouTube Music search results (e.g. dropping non-music episodes).
