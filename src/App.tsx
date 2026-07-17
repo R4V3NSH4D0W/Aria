@@ -478,7 +478,7 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <section className="flex-1 flex flex-col overflow-y-auto">
+        <section className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? 'pb-36' : ''}`}>
           <Header
             activeTab={activeTab}
             playlists={playlists}

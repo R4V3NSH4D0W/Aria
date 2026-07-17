@@ -425,6 +425,51 @@ async fn search_yt_direct(query: String) -> Result<Vec<Value>, String> {
     Ok(results)
 }
 
+async fn ensure_visitor_data(client: &reqwest::Client) -> String {
+    let current = if let Ok(guard) = VISITOR_DATA.lock() {
+        guard.clone()
+    } else {
+        "".to_string()
+    };
+    if !current.is_empty() {
+        return current;
+    }
+
+    println!("visitorData is empty, fetching a new session token...");
+    let payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "query": "music"
+    });
+
+    if let Ok(res) = client.post("https://music.youtube.com/youtubei/v1/search")
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json")
+        .send()
+        .await 
+    {
+        if let Ok(data) = res.json::<serde_json::Value>().await {
+            if let Some(v_data) = data.pointer("/responseContext/visitorData").and_then(|v| v.as_str()) {
+                if let Ok(mut guard) = VISITOR_DATA.lock() {
+                    *guard = v_data.to_string();
+                }
+                println!("Successfully generated new visitorData: {}", v_data);
+                return v_data.to_string();
+            } else {
+                println!("Failed to find visitorData in response: {:?}", data.pointer("/responseContext"));
+            }
+        }
+    }
+    "".to_string()
+}
+
 #[tauri::command]
 async fn get_yt_stream_direct(video_id: String) -> Result<String, String> {
     println!("get_yt_stream_direct video_id: {}", video_id);
@@ -433,13 +478,8 @@ async fn get_yt_stream_direct(video_id: String) -> Result<String, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    // Load active visitorData session token
-    let visitor_data = if let Ok(guard) = VISITOR_DATA.lock() {
-        guard.clone()
-    } else {
-        "".to_string()
-    };
-
+    // Load or fetch active visitorData session token
+    let visitor_data = ensure_visitor_data(&client).await;
     println!("Using session visitorData: {}", visitor_data);
 
     // Context including active visitorData to bypass LOGIN_REQUIRED anti-bot blocks

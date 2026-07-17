@@ -22,7 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-6 flex flex-col gap-6">
         {/* Header / Logo */}
         <div className="flex items-center gap-2.5">
-          <Disc className="w-5.5 h-5.5 text-white" />
+          <Disc className="size-8 text-white" />
           <div>
             <span className="font-bold text-lg tracking-wide text-white">
               Aria
@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="flex flex-col gap-1.5">
           <button
             onClick={() => setActiveTab("search")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border ${
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "search"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab("favorites")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border ${
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "favorites"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={pl.id}
               onClick={() => setActiveTab(pl.id)}
-              className={`group flex items-center justify-between px-4 py-2.5 rounded-xl text-left transition-all duration-200 text-sm ${
+              className={`group flex items-center justify-between px-4 py-2.5 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
                 activeTab === pl.id
                   ? "bg-white/10 text-white font-medium border border-white/5"
                   : "text-slate-400 hover:text-slate-200 hover:bg-white/5"

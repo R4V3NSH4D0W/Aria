@@ -48,7 +48,7 @@ export const Player: React.FC<PlayerProps> = ({
   formatTime,
 }) => {
   return (
-    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up">
       {/* Left: Track Info */}
       <div className="flex items-center gap-4 w-1/4 min-w-[200px]">
         <div className="w-14 h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5">

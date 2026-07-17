@@ -101,3 +101,18 @@
     background-color: #08090a;
     }
 }
+
+@keyframes slideUpPlayer {
+  from {
+    transform: translateY(150%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-player-slide-up {
+  animation: slideUpPlayer 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
