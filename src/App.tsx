@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Music, AlertCircle } from "lucide-react";
-import { Track, Playlist } from "./types";
+import { Track, Playlist, SearchResultItem, ArtistDetails } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { TrackItem } from "./components/TrackItem";
+import { ArtistItem } from "./components/ArtistItem";
+import { ArtistDetailsView } from "./components/ArtistDetailsView";
 import { Player } from "./components/Player";
 import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
 import { QueuePanel } from "./components/QueuePanel.tsx";
@@ -13,8 +15,13 @@ export default function App() {
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<Track[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [searchError, setSearchError] = useState("");
+
+  // Artist browsing state
+  const [selectedArtist, setSelectedArtist] = useState<ArtistDetails | null>(null);
+  const [artistLoading, setArtistLoading] = useState(false);
+  const [artistError, setArtistError] = useState("");
 
   // Playback state
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -35,6 +42,10 @@ export default function App() {
   const [favoriteSort, setFavoriteSort] = useState<
     "recent" | "oldest" | "title"
   >("recent");
+  const [recentlyPlayed, setRecentlyPlayed] = useState<Track[]>(() => {
+    const saved = localStorage.getItem("aria_recently_played");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [activeTab, setActiveTab] = useState<string>("search");
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -86,6 +97,18 @@ export default function App() {
     localStorage.setItem("aria_favorites", JSON.stringify(updated));
   };
 
+  const addToRecentlyPlayed = (track: Track) => {
+    setRecentlyPlayed((prev) => {
+      const filtered = prev.filter((t) => t.videoId !== track.videoId);
+      const updated = [track, ...filtered];
+      if (updated.length > 100) {
+        updated.splice(100);
+      }
+      localStorage.setItem("aria_recently_played", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const resolveTrackDuration = async (track: Track): Promise<Track> => {
     try {
       const rawJson = await invoke<string>("get_yt_stream_direct", {
@@ -103,7 +126,7 @@ export default function App() {
       console.error("Track metadata error:", err);
     }
 
-    return track;
+    return { ...track, duration: 0 };
   };
 
   // Perform search (Directly queries YouTube Music InnerTube API from local Rust backend)
@@ -115,16 +138,23 @@ export default function App() {
     setLoading(true);
     setSearchError("");
     setSearchResults([]);
+    setSelectedArtist(null);
 
     try {
-      const tracks = await invoke<Track[]>("search_yt_direct", {
+      const items = await invoke<SearchResultItem[]>("search_yt_direct", {
         query: searchQuery,
       });
-      if (tracks && tracks.length > 0) {
-        const tracksWithDurations = await Promise.all(
-          tracks.map((track) => resolveTrackDuration(track)),
+      if (items && items.length > 0) {
+        const resolvedItems = await Promise.all(
+          items.map(async (item) => {
+            if (item.type === "artist") return item;
+            return resolveTrackDuration(item);
+          }),
         );
-        setSearchResults(tracksWithDurations);
+        const filteredItems = resolvedItems.filter(
+          (item) => item.type === "artist" || (item.duration !== undefined && item.duration > 0),
+        );
+        setSearchResults(filteredItems);
       } else {
         setSearchError("No music tracks found on YouTube Music.");
       }
@@ -147,7 +177,7 @@ export default function App() {
     // Set loading indicator
     setSearchResults((prev) =>
       prev.map((t) =>
-        t.videoId === track.videoId ? { ...t, isResolving: true } : t,
+        t.type !== "artist" && t.videoId === track.videoId ? { ...t, isResolving: true } : t,
       ),
     );
     setCurrentTrack({ ...track, isResolving: true });
@@ -167,6 +197,7 @@ export default function App() {
         if (streamData.duration > 0) {
           setDuration(streamData.duration);
         }
+        addToRecentlyPlayed(track);
       } else {
         throw new Error("No stream URL");
       }
@@ -179,7 +210,7 @@ export default function App() {
     // Remove loading indicators
     setSearchResults((prev) =>
       prev.map((t) =>
-        t.videoId === track.videoId ? { ...t, isResolving: false } : t,
+        t.type !== "artist" && t.videoId === track.videoId ? { ...t, isResolving: false } : t,
       ),
     );
   };
@@ -450,6 +481,51 @@ export default function App() {
     if (activeTab === id) setActiveTab("search");
   };
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedArtist(null);
+  };
+
+  const loadArtist = async (browseId: string) => {
+    setArtistLoading(true);
+    setArtistError("");
+    setSelectedArtist(null);
+    try {
+      const details = await invoke<ArtistDetails>("get_yt_artist", { browseId });
+      if (details && details.songs && details.songs.length > 0) {
+        const resolvedSongs = await Promise.all(
+          details.songs.map((track) => resolveTrackDuration(track)),
+        );
+        details.songs = resolvedSongs.filter((track) => track.duration !== undefined && track.duration > 0);
+      }
+      setSelectedArtist(details);
+    } catch (err) {
+      console.error("Failed to load artist:", err);
+      setArtistError("Failed to load artist details.");
+    }
+    setArtistLoading(false);
+  };
+
+  const playSongs = (songs: Track[], shuffle: boolean, startFromTrackId?: string) => {
+    if (songs.length === 0) return;
+
+    let playbackList = [...songs];
+    if (shuffle) {
+      playbackList.sort(() => Math.random() - 0.5);
+    } else if (startFromTrackId) {
+      const idx = playbackList.findIndex(t => t.videoId === startFromTrackId);
+      if (idx !== -1) {
+        const targetTrack = playbackList[idx];
+        setQueue(playbackList);
+        playTrack(targetTrack);
+        return;
+      }
+    }
+
+    setQueue(playbackList);
+    playTrack(playbackList[0]);
+  };
+
   const addTrackToPlaylist = (playlistId: string, track: Track) => {
     const updated = playlists.map((p) => {
       if (p.id === playlistId) {
@@ -462,6 +538,15 @@ export default function App() {
   };
 
   const removeTrackFromPlaylist = (playlistId: string, videoId: string) => {
+    if (playlistId === "recently-played") {
+      setRecentlyPlayed((prev) => {
+        const updated = prev.filter((t) => t.videoId !== videoId);
+        localStorage.setItem("aria_recently_played", JSON.stringify(updated));
+        return updated;
+      });
+      return;
+    }
+
     const updated = playlists.map((p) => {
       if (p.id === playlistId) {
         return { ...p, tracks: p.tracks.filter((t) => t.videoId !== videoId) };
@@ -475,15 +560,18 @@ export default function App() {
     }
   };
 
-  const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs <= 0) return "--:--";
-    const minutes = Math.floor(secs / 60);
-    const seconds = Math.floor(secs % 60);
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-  };
 
-  const getActiveTracks = () => {
-    if (activeTab === "search") return searchResults;
+
+  const getActiveTracks = (): Track[] => {
+    if (selectedArtist) {
+      return selectedArtist.songs;
+    }
+    if (activeTab === "recently-played") {
+      return recentlyPlayed;
+    }
+    if (activeTab === "search") {
+      return searchResults.filter((item): item is Track => !("type" in item && item.type === "artist"));
+    }
     if (activeTab === "favorites") {
       const sortedFavorites = [...favorites].sort((a, b) => {
         if (favoriteSort === "title") {
@@ -518,9 +606,12 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden z-10">
         <Sidebar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleTabChange}
           playlists={playlists}
-          deletePlaylist={deletePlaylist}
+          deletePlaylist={(id, e) => {
+            deletePlaylist(id, e);
+            setSelectedArtist(null);
+          }}
           setShowCreatePlaylistModal={setShowCreatePlaylistModal}
         />
 
@@ -545,72 +636,117 @@ export default function App() {
           >
             {/* Connection mode / alert toast */}
             <div className="lg:col-span-1 min-w-0 flex flex-col gap-6 h-full">
-              {searchError && (
-                <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm flex items-center gap-3 shadow-inner">
-                  <AlertCircle className="w-5 h-5 shrink-0 text-indigo-400" />
-                  <span>{searchError}</span>
-                </div>
-              )}
-
-              {/* Loading Spinner */}
-              {loading ? (
+              {artistLoading ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
                   <div className="relative w-14 h-14 -translate-y-5">
                     <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
                     <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
                   </div>
                   <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
-                    Searching YouTube Music...
+                    Loading Artist Profile...
                   </p>
                 </div>
+              ) : selectedArtist ? (
+                <ArtistDetailsView
+                  artist={selectedArtist}
+                  onBack={() => setSelectedArtist(null)}
+                  playSongs={playSongs}
+                  playTrack={playTrack}
+                  isPlaying={isPlaying}
+                  currentTrack={currentTrack}
+                  activeDropdownTrackId={activeDropdownTrackId}
+                  setActiveDropdownTrackId={setActiveDropdownTrackId}
+                  playlists={playlists}
+                  addTrackToPlaylist={addTrackToPlaylist}
+                  addTrackToQueue={addTrackToQueue}
+                  toggleFavorite={toggleFavorite}
+                  isFavorite={isFavorite}
+                  setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                />
               ) : (
                 <>
-                  <div className="flex-1 flex flex-col">
-                    {activeTab === "search" && !hasSearched ? (
-                      <div className="flex-1 flex items-center justify-center px-6 py-12 text-center">
-                        <div className="flex flex-col items-center gap-4 max-w-sm -translate-y-5">
-                          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
-                            <Music className="w-8 h-8 text-indigo-400/50" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg text-slate-200">
-                              Search for music
-                            </h3>
-                            <p className="text-sm text-slate-500 max-w-xs mt-1">
-                              Type a song, artist, or album above to start
-                              browsing.
-                            </p>
+                  {artistError && (
+                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-3 shadow-inner">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                      <span>{artistError}</span>
+                    </div>
+                  )}
+
+                  {searchError && (
+                    <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm flex items-center gap-3 shadow-inner">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-indigo-400" />
+                      <span>{searchError}</span>
+                    </div>
+                  )}
+
+                  {/* Loading Spinner */}
+                  {loading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                      <div className="relative w-14 h-14 -translate-y-5">
+                        <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                        <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
+                      </div>
+                      <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
+                        Searching YouTube Music...
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col">
+                      {activeTab === "search" && !hasSearched ? (
+                        <div className="flex-1 flex items-center justify-center px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-4 max-w-sm -translate-y-5">
+                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
+                              <Music className="w-8 h-8 text-indigo-400/50" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg text-slate-200">
+                                Search for music
+                              </h3>
+                              <p className="text-sm text-slate-500 max-w-xs mt-1">
+                                Type a song, artist, or album above to start
+                                browsing.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      getActiveTracks().map((track, idx) => {
-                        const isCurrent =
-                          currentTrack?.videoId === track.videoId;
-                        return (
-                          <TrackItem
-                            key={track.videoId + idx}
-                            track={track}
-                            isCurrent={isCurrent}
-                            isPlaying={isPlaying}
-                            activeDropdownTrackId={activeDropdownTrackId}
-                            setActiveDropdownTrackId={setActiveDropdownTrackId}
-                            playlists={playlists}
-                            addTrackToPlaylist={addTrackToPlaylist}
-                            addTrackToQueue={addTrackToQueue}
-                            toggleFavorite={toggleFavorite}
-                            isFavorite={isFavorite}
-                            activeTab={activeTab}
-                            removeTrackFromPlaylist={removeTrackFromPlaylist}
-                            playTrack={(t) => playTrack(t)}
-                            formatTime={formatTime}
-                            setShowCreatePlaylistModal={
-                              setShowCreatePlaylistModal
-                            }
-                          />
-                        );
-                      })
-                    )}
+                      ) : (
+                        (activeTab === "search" ? searchResults : getActiveTracks()).map((item, idx) => {
+                          if ("type" in item && item.type === "artist") {
+                            return (
+                              <ArtistItem
+                                key={item.browseId + idx}
+                                artist={item}
+                                onClick={() => loadArtist(item.browseId)}
+                              />
+                            );
+                          }
+
+                          const track = item as Track;
+                          const isCurrent =
+                            currentTrack?.videoId === track.videoId;
+                          return (
+                            <TrackItem
+                              key={track.videoId + idx}
+                              track={track}
+                              isCurrent={isCurrent}
+                              isPlaying={isPlaying}
+                              activeDropdownTrackId={activeDropdownTrackId}
+                              setActiveDropdownTrackId={setActiveDropdownTrackId}
+                              playlists={playlists}
+                              addTrackToPlaylist={addTrackToPlaylist}
+                              addTrackToQueue={addTrackToQueue}
+                              toggleFavorite={toggleFavorite}
+                              isFavorite={isFavorite}
+                              activeTab={activeTab}
+                              removeTrackFromPlaylist={removeTrackFromPlaylist}
+                              playTrack={(t) => playTrack(t)}
+                              setShowCreatePlaylistModal={
+                                setShowCreatePlaylistModal
+                              }
+                            />
+                          );
+                        })
+                      )}
                     {activeTab === "search" &&
                       hasSearched &&
                       getActiveTracks().length === 0 && (
@@ -652,6 +788,7 @@ export default function App() {
                         </div>
                       )}
                   </div>
+                )}
                 </>
               )}
             </div>
@@ -693,7 +830,6 @@ export default function App() {
           handleVolumeChange={handleVolumeChange}
           handleNext={handleNext}
           handlePrev={handlePrev}
-          formatTime={formatTime}
         />
       )}
 

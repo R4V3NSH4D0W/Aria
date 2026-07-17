@@ -1,6 +1,7 @@
 import React from "react";
 import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2 } from "lucide-react";
 import { Track } from "../types";
+import { formatTime } from "../lib/utils";
 
 interface PlayerProps {
   currentTrack: Track;
@@ -22,7 +23,6 @@ interface PlayerProps {
   handleVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleNext: () => void;
   handlePrev: () => void;
-  formatTime: (secs: number) => string;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -45,22 +45,30 @@ export const Player: React.FC<PlayerProps> = ({
   handleVolumeChange,
   handleNext,
   handlePrev,
-  formatTime,
 }) => {
   return (
     <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up">
       {/* Left: Track Info */}
       <div className="flex items-center gap-4 w-1/4 min-w-[200px]">
-        <div className="w-14 h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5">
+        <div className="w-14 h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5 bg-slate-800 shrink-0 group/thumb">
           <img src={currentTrack.thumbnail} alt={currentTrack.title} className="w-full h-full object-cover" />
+          {currentTrack.isResolving ? (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+              <Loader2 className="w-5 h-5 animate-spin text-white" />
+            </div>
+          ) : (
+            <div className={`absolute inset-0 bg-black/45 flex items-end justify-center pb-3 gap-[3px] transition-opacity duration-300 ${
+              isPlaying ? "opacity-100" : "opacity-0 group-hover/thumb:opacity-100"
+            } ${isPlaying ? "animate-equalizer-running" : "animate-equalizer-paused"}`}>
+              <div className="w-0.75 bg-indigo-400 rounded-full equalizer-bar equalizer-bar-1" />
+              <div className="w-0.75 bg-indigo-400 rounded-full equalizer-bar equalizer-bar-2" />
+              <div className="w-0.75 bg-indigo-400 rounded-full equalizer-bar equalizer-bar-3" />
+              <div className="w-0.75 bg-indigo-400 rounded-full equalizer-bar equalizer-bar-4" />
+            </div>
+          )}
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="font-bold text-sm truncate text-white">{currentTrack.title}</h4>
-            {currentTrack.isResolving && (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />
-            )}
-          </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="font-bold text-sm truncate text-white">{currentTrack.title}</h4>
           <p className="text-xs text-slate-400 truncate mt-0.5">{currentTrack.uploaderName}</p>
         </div>
         <button

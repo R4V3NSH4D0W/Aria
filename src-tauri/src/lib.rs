@@ -214,6 +214,66 @@ fn is_episode(item_renderer: &Value) -> bool {
     false
 }
 
+fn is_artist(item_renderer: &Value) -> bool {
+    if let Some(page_type) = item_renderer
+        .pointer("/navigationEndpoint/browseEndpoint/browseEndpointContextSupportedConfigs/browseEndpointContextMusicConfig/pageType")
+        .and_then(|v| v.as_str())
+    {
+        if page_type == "MUSIC_PAGE_TYPE_ARTIST" || page_type == "MUSIC_PAGE_TYPE_LIBRARY_ARTIST" {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_user_channel(item_renderer: &Value) -> bool {
+    if let Some(page_type) = item_renderer
+        .pointer("/navigationEndpoint/browseEndpoint/browseEndpointContextSupportedConfigs/browseEndpointContextMusicConfig/pageType")
+        .and_then(|v| v.as_str())
+    {
+        if page_type == "MUSIC_PAGE_TYPE_USER_CHANNEL" {
+            return true;
+        }
+    }
+    false
+}
+
+fn extract_artist_from_renderer(item_renderer: &Value) -> Option<serde_json::Value> {
+    if !is_artist(item_renderer) && !is_user_channel(item_renderer) {
+        return None;
+    }
+    
+    let title = item_renderer.pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer/text/runs/0/text")
+        .or_else(|| item_renderer.pointer("/title/runs/0/text"))
+        .and_then(|v| v.as_str())?;
+
+    let browse_id = item_renderer.pointer("/navigationEndpoint/browseEndpoint/browseId")
+        .and_then(|v| v.as_str())?;
+
+    let thumbnail = extract_thumbnail(item_renderer);
+
+    let mut shuffle_playlist_id = None;
+    if let Some(menu_items) = item_renderer.pointer("/menu/menuRenderer/items").and_then(|i| i.as_array()) {
+        for item in menu_items {
+            if let Some(icon_type) = item.pointer("/menuNavigationItemRenderer/icon/iconType").and_then(|i| i.as_str()) {
+                if icon_type == "MUSIC_SHUFFLE" {
+                    if let Some(pl_id) = item.pointer("/menuNavigationItemRenderer/navigationEndpoint/watchPlaylistEndpoint/playlistId").and_then(|p| p.as_str()) {
+                        shuffle_playlist_id = Some(pl_id.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    Some(serde_json::json!({
+        "type": "artist",
+        "browseId": browse_id,
+        "title": title,
+        "thumbnail": thumbnail,
+        "shufflePlaylistId": shuffle_playlist_id
+    }))
+}
+
 fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Value> {
     // Skip episodes, podcasts, and non-music audio — only keep songs
     // Mirrors Metrolist SearchPage.kt: isEpisode is checked BEFORE isSong
@@ -243,6 +303,7 @@ fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Valu
     let duration_secs = extract_duration(item_renderer);
 
     Some(serde_json::json!({
+        "type": "track",
         "title": title,
         "videoId": video_id,
         "uploaderName": artist,
@@ -251,9 +312,9 @@ fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Valu
     }))
 }
 
-// Helper to extract tracks from InnerTube search response
+// Helper to extract tracks/artists from InnerTube search response
 fn parse_search_results(data: &Value) -> Vec<serde_json::Value> {
-    let mut tracks = Vec::new();
+    let mut results = Vec::new();
     
     // Extract visitorData to bypass bot detection on subsequent player requests
     if let Some(v_data) = data.pointer("/responseContext/visitorData").and_then(|v| v.as_str()) {
@@ -276,7 +337,9 @@ fn parse_search_results(data: &Value) -> Vec<serde_json::Value> {
                                     println!("First musicShelfRenderer item JSON:\n{}", serde_json::to_string_pretty(item_renderer).unwrap());
                                 }
                                 if let Some(track) = extract_track_from_renderer(item_renderer) {
-                                    tracks.push(track);
+                                    results.push(track);
+                                } else if let Some(artist) = extract_artist_from_renderer(item_renderer) {
+                                    results.push(artist);
                                 }
                             }
                         }
@@ -291,7 +354,9 @@ fn parse_search_results(data: &Value) -> Vec<serde_json::Value> {
                                     println!("First itemSectionRenderer item JSON:\n{}", serde_json::to_string_pretty(item_renderer).unwrap());
                                 }
                                 if let Some(track) = extract_track_from_renderer(item_renderer) {
-                                    tracks.push(track);
+                                    results.push(track);
+                                } else if let Some(artist) = extract_artist_from_renderer(item_renderer) {
+                                    results.push(artist);
                                 }
                             }
                         }
@@ -300,7 +365,7 @@ fn parse_search_results(data: &Value) -> Vec<serde_json::Value> {
             }
         }
     }
-    tracks
+    results
 }
 
 fn parse_home_results(data: &Value) -> Vec<serde_json::Value> {
@@ -597,6 +662,122 @@ async fn get_yt_stream_direct(video_id: String) -> Result<String, String> {
 
     Err("Could not find any suitable unencrypted audio stream".to_string())
 }
+#[tauri::command]
+async fn get_yt_artist(browse_id: String) -> Result<Value, String> {
+    println!("get_yt_artist browse_id: {}", browse_id);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "browseId": browse_id
+    });
+
+    let res = client.post("https://music.youtube.com/youtubei/v1/browse")
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("Artist browse request failed: {}", e))?;
+
+    let data = res.json::<Value>().await.map_err(|e| format!("Failed to parse artist response: {}", e))?;
+
+    // Parse artist page details
+    let mut name = "Unknown Artist".to_string();
+    let mut thumbnail = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300".to_string();
+    let mut description = "".to_string();
+    let mut subscribers = "".to_string();
+
+    // Extract header info
+    if let Some(header) = data.get("header") {
+        if let Some(immersive) = header.get("musicImmersiveHeaderRenderer") {
+            if let Some(title_text) = immersive.pointer("/title/runs/0/text").and_then(|v| v.as_str()) {
+                name = title_text.to_string();
+            }
+            thumbnail = extract_thumbnail(immersive);
+            if let Some(sub_text) = immersive.pointer("/subscriptionButton/subscribeButtonRenderer/subscriberCountWithSubscribeText/runs/0/text")
+                .or_else(|| immersive.pointer("/subscriptionButton/subscribeButtonRenderer/longSubscriberCountText/runs/0/text"))
+                .or_else(|| immersive.pointer("/subscriptionButton/subscribeButtonRenderer/shortSubscriberCountText/runs/0/text"))
+                .and_then(|v| v.as_str()) {
+                subscribers = sub_text.to_string();
+            }
+        } else if let Some(visual) = header.get("musicVisualHeaderRenderer") {
+            if let Some(title_text) = visual.pointer("/title/runs/0/text").and_then(|v| v.as_str()) {
+                name = title_text.to_string();
+            }
+            thumbnail = extract_thumbnail(visual);
+        } else if let Some(music_header) = header.get("musicHeaderRenderer") {
+            if let Some(title_text) = music_header.pointer("/title/runs/0/text").and_then(|v| v.as_str()) {
+                name = title_text.to_string();
+            }
+        }
+    }
+
+    // Extract description
+    if let Some(contents) = data.pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents").and_then(|c| c.as_array()) {
+        for section in contents {
+            if let Some(desc_shelf) = section.get("musicDescriptionShelfRenderer") {
+                if let Some(runs) = desc_shelf.pointer("/description/runs").and_then(|r| r.as_array()) {
+                    let mut desc = String::new();
+                    for run in runs {
+                        if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
+                            desc.push_str(text);
+                        }
+                    }
+                    description = desc;
+                }
+            }
+        }
+    }
+
+    // Now extract tracks/songs
+    let mut songs = Vec::new();
+    if let Some(contents) = data.pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents").and_then(|c| c.as_array()) {
+        for section in contents {
+            if let Some(shelf) = section.get("musicShelfRenderer") {
+                if let Some(items) = shelf.get("contents").and_then(|i| i.as_array()) {
+                    for item in items {
+                        if let Some(item_renderer) = item.get("musicResponsiveListItemRenderer") {
+                            if let Some(track) = extract_track_from_renderer(item_renderer) {
+                                songs.push(track);
+                            }
+                        }
+                    }
+                }
+            } else if let Some(carousel) = section.get("musicCarouselShelfRenderer") {
+                if let Some(items) = carousel.get("contents").and_then(|i| i.as_array()) {
+                    for item in items {
+                        let renderer = item.get("musicResponsiveListItemRenderer")
+                            .or_else(|| item.get("musicTwoRowItemRenderer"));
+                        if let Some(item_renderer) = renderer {
+                            if let Some(track) = extract_track_from_renderer(item_renderer) {
+                                songs.push(track);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(serde_json::json!({
+        "name": name,
+        "thumbnail": thumbnail,
+        "description": description,
+        "subscribers": subscribers,
+        "songs": songs
+    }))
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -611,7 +792,8 @@ pub fn run() {
             greet,
             get_yt_home,
             search_yt_direct,
-            get_yt_stream_direct
+            get_yt_stream_direct,
+            get_yt_artist
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

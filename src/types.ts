@@ -1,4 +1,5 @@
 export interface Track {
+  type?: "track";
   title: string;
   videoId: string;
   uploaderName: string;
@@ -7,6 +8,24 @@ export interface Track {
   isResolving?: boolean;
   addedAt?: number;
 }
+
+export interface ArtistItem {
+  type: "artist";
+  browseId: string;
+  title: string;
+  thumbnail: string;
+  shufflePlaylistId?: string;
+}
+
+export interface ArtistDetails {
+  name: string;
+  thumbnail: string;
+  description?: string;
+  subscribers?: string;
+  songs: Track[];
+}
+
+export type SearchResultItem = Track | ArtistItem;
 
 export interface Playlist {
   id: string;
@@ -18,3 +37,4 @@ export interface HomeSection {
   title: string;
   items: Track[];
 }
+

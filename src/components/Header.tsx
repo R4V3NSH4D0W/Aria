@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Search, Heart, ListMusic } from "lucide-react";
+import { ChevronDown, Search, Heart, ListMusic, History } from "lucide-react";
 import { Playlist } from "../types";
 
 interface HeaderProps {
@@ -70,6 +70,11 @@ export const Header: React.FC<HeaderProps> = ({
               <>
                 <Heart className="w-7 h-7 text-pink-500 fill-pink-500/20" />
                 <span>Favorite Songs</span>
+              </>
+            ) : activeTab === "recently-played" ? (
+              <>
+                <History className="w-7 h-7 text-sky-400" />
+                <span>Recently Played</span>
               </>
             ) : (
               <>

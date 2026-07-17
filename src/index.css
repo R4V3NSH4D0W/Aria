@@ -116,3 +116,41 @@
 .animate-player-slide-up {
   animation: slideUpPlayer 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+@keyframes bounceEqualizer1 {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+@keyframes bounceEqualizer2 {
+  0%, 100% { height: 7px; }
+  50% { height: 22px; }
+}
+@keyframes bounceEqualizer3 {
+  0%, 100% { height: 5px; }
+  50% { height: 13px; }
+}
+@keyframes bounceEqualizer4 {
+  0%, 100% { height: 8px; }
+  50% { height: 18px; }
+}
+
+.equalizer-bar-1 {
+  animation: bounceEqualizer1 0.8s ease-in-out infinite;
+}
+.equalizer-bar-2 {
+  animation: bounceEqualizer2 0.7s ease-in-out infinite;
+}
+.equalizer-bar-3 {
+  animation: bounceEqualizer3 0.9s ease-in-out infinite;
+}
+.equalizer-bar-4 {
+  animation: bounceEqualizer4 0.6s ease-in-out infinite;
+}
+
+.animate-equalizer-running .equalizer-bar {
+  animation-play-state: running;
+}
+
+.animate-equalizer-paused .equalizer-bar {
+  animation-play-state: paused;
+}

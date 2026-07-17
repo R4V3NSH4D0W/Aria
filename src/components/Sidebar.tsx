@@ -1,5 +1,5 @@
 import React from "react";
-import { Disc, Search, Heart, Plus, ListMusic, Trash2 } from "lucide-react";
+import { Disc, Search, Heart, Plus, ListMusic, Trash2, History } from "lucide-react";
 import { Playlist } from "../types";
 
 interface SidebarProps {
@@ -57,6 +57,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Heart className="w-4 h-4 text-pink-300 fill-pink-300/15" />
             <span>Favorites</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("recently-played")}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+              activeTab === "recently-played"
+                ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
+            }`}
+          >
+            <History className="w-4 h-4 text-sky-300" />
+            <span>Recently Played</span>
           </button>
         </nav>
 
