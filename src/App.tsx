@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { Music, AlertCircle } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { Track, Playlist } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -32,10 +32,14 @@ export default function App() {
   // Playlists & Favorites (Stored in localStorage)
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [favorites, setFavorites] = useState<Track[]>([]);
-  const [activeTab, setActiveTab] = useState<"home" | "search" | "favorites" | string>("home");
+  const [activeTab, setActiveTab] = useState<
+    "home" | "search" | "favorites" | string
+  >("home");
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
-  const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<string | null>(null);
+  const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<
+    string | null
+  >(null);
 
   // Audio Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -50,7 +54,7 @@ export default function App() {
         savedPlaylists = localStorage.getItem("metrolist_playlists");
       }
       if (savedPlaylists) setPlaylists(JSON.parse(savedPlaylists));
-      
+
       let savedFavorites = localStorage.getItem("aria_favorites");
       if (!savedFavorites) {
         savedFavorites = localStorage.getItem("metrolist_favorites");
@@ -90,7 +94,9 @@ export default function App() {
     setSearchResults([]);
 
     try {
-      const tracks = await invoke<Track[]>("search_yt_direct", { query: searchQuery });
+      const tracks = await invoke<Track[]>("search_yt_direct", {
+        query: searchQuery,
+      });
       if (tracks && tracks.length > 0) {
         setSearchResults(tracks);
       } else {
@@ -103,8 +109,42 @@ export default function App() {
     setLoading(false);
   };
 
+  const openBrowseTarget = async (track: Track) => {
+    if (!track.browseId || !track.browseParams) return;
+
+    try {
+      const playlistTracks = await invoke<Track[]>("get_playlist_tracks", {
+        browseId: track.browseId,
+        params: track.browseParams,
+      });
+
+      if (playlistTracks.length === 0) {
+        setPlaybackError("This playlist could not be loaded.");
+        return;
+      }
+
+      const [firstTrack, ...rest] = playlistTracks;
+      setQueue([firstTrack, ...rest]);
+      setCurrentTrack(firstTrack);
+      await playTrack(firstTrack, [firstTrack, ...rest]);
+    } catch (err) {
+      console.error("Failed to load playlist tracks:", err);
+      setPlaybackError("Unable to open this playlist inside the app.");
+    }
+  };
+
   // Play track (Resolves unencrypted stream directly from YouTube client in Rust)
   const playTrack = async (track: Track, newQueue?: Track[]) => {
+    if (track.browseId && track.videoId === track.title.toLowerCase().replace(/\s+/g, "-")) {
+      await openBrowseTarget(track);
+      return;
+    }
+
+    if (track.browseId && !track.videoId.startsWith("http") && track.videoId.length !== 11) {
+      await openBrowseTarget(track);
+      return;
+    }
+
     setPlaybackError("");
     setIsPlaying(false);
     setResolvedAudioUrl(null);
@@ -113,18 +153,27 @@ export default function App() {
     autoAdvancedRef.current = false; // reset guard for new track
 
     // Set loading indicator
-    setSearchResults(prev => prev.map(t => t.videoId === track.videoId ? { ...t, isResolving: true } : t));
+    setSearchResults((prev) =>
+      prev.map((t) =>
+        t.videoId === track.videoId ? { ...t, isResolving: true } : t,
+      ),
+    );
     setCurrentTrack({ ...track, isResolving: true });
 
     if (newQueue) {
       setQueue(newQueue);
-    } else if (!queue.some(t => t.videoId === track.videoId)) {
-      setQueue(prev => [...prev, track]);
+    } else if (!queue.some((t) => t.videoId === track.videoId)) {
+      setQueue((prev) => [...prev, track]);
     }
 
     try {
-      const rawJson = await invoke<string>("get_yt_stream_direct", { videoId: track.videoId });
-      const streamData = JSON.parse(rawJson) as { url: string; duration: number };
+      const rawJson = await invoke<string>("get_yt_stream_direct", {
+        videoId: track.videoId,
+      });
+      const streamData = JSON.parse(rawJson) as {
+        url: string;
+        duration: number;
+      };
       if (streamData.url) {
         setResolvedAudioUrl(streamData.url);
         setCurrentTrack({ ...track, isResolving: false });
@@ -142,7 +191,11 @@ export default function App() {
     }
 
     // Remove loading indicators
-    setSearchResults(prev => prev.map(t => t.videoId === track.videoId ? { ...t, isResolving: false } : t));
+    setSearchResults((prev) =>
+      prev.map((t) =>
+        t.videoId === track.videoId ? { ...t, isResolving: false } : t,
+      ),
+    );
   };
 
   useEffect(() => {
@@ -151,9 +204,10 @@ export default function App() {
 
     // Wait for canplay before calling .play() — prevents AbortError
     const onCanPlay = () => {
-      audio.play()
+      audio
+        .play()
         .then(() => setIsPlaying(true))
-        .catch(err => {
+        .catch((err) => {
           if (err?.name === "AbortError") return; // benign: interrupted by a new load
           console.error("Playback error:", err);
           setPlaybackError("Audio playback failed. Try again.");
@@ -186,7 +240,9 @@ export default function App() {
     if (audioRef.current) {
       const audioDur = audioRef.current.duration;
       // Only use audio element duration as fallback
-      setDuration(prev => (prev > 0 ? prev : (isFinite(audioDur) ? audioDur : 0)));
+      setDuration((prev) =>
+        prev > 0 ? prev : isFinite(audioDur) ? audioDur : 0,
+      );
     }
   };
 
@@ -201,9 +257,10 @@ export default function App() {
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play()
+      audio
+        .play()
         .then(() => setIsPlaying(true))
-        .catch(err => {
+        .catch((err) => {
           if (err?.name === "AbortError") return; // benign
           setPlaybackError("Playback resume failed.");
         });
@@ -235,7 +292,9 @@ export default function App() {
 
   const handleNext = () => {
     if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(t => t.videoId === currentTrack.videoId);
+    const currentIndex = queue.findIndex(
+      (t) => t.videoId === currentTrack.videoId,
+    );
     let nextIndex = currentIndex + 1;
     if (isShuffled) {
       nextIndex = Math.floor(Math.random() * queue.length);
@@ -247,7 +306,9 @@ export default function App() {
 
   const handlePrev = () => {
     if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(t => t.videoId === currentTrack.videoId);
+    const currentIndex = queue.findIndex(
+      (t) => t.videoId === currentTrack.videoId,
+    );
     let prevIndex = currentIndex - 1;
     if (prevIndex < 0) {
       prevIndex = queue.length - 1;
@@ -255,11 +316,12 @@ export default function App() {
     playTrack(queue[prevIndex]);
   };
 
-  const isFavorite = (track: Track) => favorites.some(t => t.videoId === track.videoId);
+  const isFavorite = (track: Track) =>
+    favorites.some((t) => t.videoId === track.videoId);
   const toggleFavorite = (track: Track) => {
     let updated;
     if (isFavorite(track)) {
-      updated = favorites.filter(t => t.videoId !== track.videoId);
+      updated = favorites.filter((t) => t.videoId !== track.videoId);
     } else {
       updated = [...favorites, track];
     }
@@ -271,7 +333,7 @@ export default function App() {
     const newPlaylist: Playlist = {
       id: Date.now().toString(),
       name: newPlaylistName,
-      tracks: []
+      tracks: [],
     };
     savePlaylists([...playlists, newPlaylist]);
     setNewPlaylistName("");
@@ -280,15 +342,15 @@ export default function App() {
 
   const deletePlaylist = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = playlists.filter(p => p.id !== id);
+    const updated = playlists.filter((p) => p.id !== id);
     savePlaylists(updated);
     if (activeTab === id) setActiveTab("search");
   };
 
   const addTrackToPlaylist = (playlistId: string, track: Track) => {
-    const updated = playlists.map(p => {
+    const updated = playlists.map((p) => {
       if (p.id === playlistId) {
-        if (p.tracks.some(t => t.videoId === track.videoId)) return p;
+        if (p.tracks.some((t) => t.videoId === track.videoId)) return p;
         return { ...p, tracks: [...p.tracks, track] };
       }
       return p;
@@ -297,9 +359,9 @@ export default function App() {
   };
 
   const removeTrackFromPlaylist = (playlistId: string, videoId: string) => {
-    const updated = playlists.map(p => {
+    const updated = playlists.map((p) => {
       if (p.id === playlistId) {
-        return { ...p, tracks: p.tracks.filter(t => t.videoId !== videoId) };
+        return { ...p, tracks: p.tracks.filter((t) => t.videoId !== videoId) };
       }
       return p;
     });
@@ -320,7 +382,7 @@ export default function App() {
   const getActiveTracks = () => {
     if (activeTab === "search") return searchResults;
     if (activeTab === "favorites") return favorites;
-    const pl = playlists.find(p => p.id === activeTab);
+    const pl = playlists.find((p) => p.id === activeTab);
     return pl ? pl.tracks : [];
   };
 
@@ -372,7 +434,9 @@ export default function App() {
                   <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
                   <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
                 </div>
-                <p className="text-slate-400 text-sm animate-pulse font-medium">Searching YouTube Music...</p>
+                <p className="text-slate-400 text-sm animate-pulse font-medium">
+                  Searching YouTube Music...
+                </p>
               </div>
             ) : (
               <>
@@ -380,49 +444,53 @@ export default function App() {
                 <div className="space-y-1">
                   {/* Tracks List */}
                   {activeTab === "home" ? (
-                    <Home 
-                      playTrack={(track) => playTrack(track, [track])} 
-                      currentTrack={currentTrack} 
-                      isPlaying={isPlaying} 
+                    <Home
+                      playTrack={(track) => playTrack(track, [track])}
+                      currentTrack={currentTrack}
+                      isPlaying={isPlaying}
                       favorites={favorites}
                       playlists={playlists}
                       onOpenTab={setActiveTab}
                     />
                   ) : (
                     getActiveTracks().map((track, idx) => {
-                    const isCurrent = currentTrack?.videoId === track.videoId;
-                    return (
-                      <TrackItem
-                        key={track.videoId + idx}
-                        track={track}
-                        isCurrent={isCurrent}
-                        isPlaying={isPlaying}
-                        activeDropdownTrackId={activeDropdownTrackId}
-                        setActiveDropdownTrackId={setActiveDropdownTrackId}
-                        playlists={playlists}
-                        addTrackToPlaylist={addTrackToPlaylist}
-                        toggleFavorite={toggleFavorite}
-                        isFavorite={isFavorite}
-                        activeTab={activeTab}
-                        removeTrackFromPlaylist={removeTrackFromPlaylist}
-                        playTrack={(t) => playTrack(t, getActiveTracks())}
-                        formatTime={formatTime}
-                        setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-                      />
-                    );
-                  })
-                )}
+                      const isCurrent = currentTrack?.videoId === track.videoId;
+                      return (
+                        <TrackItem
+                          key={track.videoId + idx}
+                          track={track}
+                          isCurrent={isCurrent}
+                          isPlaying={isPlaying}
+                          activeDropdownTrackId={activeDropdownTrackId}
+                          setActiveDropdownTrackId={setActiveDropdownTrackId}
+                          playlists={playlists}
+                          addTrackToPlaylist={addTrackToPlaylist}
+                          toggleFavorite={toggleFavorite}
+                          isFavorite={isFavorite}
+                          activeTab={activeTab}
+                          removeTrackFromPlaylist={removeTrackFromPlaylist}
+                          playTrack={(t) => playTrack(t, getActiveTracks())}
+                          formatTime={formatTime}
+                          setShowCreatePlaylistModal={
+                            setShowCreatePlaylistModal
+                          }
+                        />
+                      );
+                    })
+                  )}
                   {activeTab !== "home" && getActiveTracks().length === 0 && (
                     <div className="flex flex-col items-center justify-center py-28 gap-4 text-center">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
                         <Music className="w-8 h-8 text-indigo-400/50" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg text-slate-200">No tracks found</h3>
+                        <h3 className="font-semibold text-lg text-slate-200">
+                          No tracks found
+                        </h3>
                         <p className="text-sm text-slate-500 max-w-xs mt-1">
-                          {activeTab === "search" 
-                            ? "Try searching for your favorite artist, album, or song." 
-                            : activeTab === "favorites" 
+                          {activeTab === "search"
+                            ? "Try searching for your favorite artist, album, or song."
+                            : activeTab === "favorites"
                               ? "Tap the heart icon on any song to add it to your favorites."
                               : "This playlist is empty. Search and add tracks to populate it!"}
                         </p>

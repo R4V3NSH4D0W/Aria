@@ -214,6 +214,11 @@ fn is_episode(item_renderer: &Value) -> bool {
     false
 }
 
+fn is_probable_video_id(video_id: &str) -> bool {
+    video_id.len() == 11
+        && video_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Value> {
     // Skip episodes, podcasts, and non-music audio — only keep songs
     // Mirrors Metrolist SearchPage.kt: isEpisode is checked BEFORE isSong
@@ -223,13 +228,16 @@ fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Valu
 
     let title = item_renderer.pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer/text/runs/0/text")
         .or_else(|| item_renderer.pointer("/title/runs/0/text"))
-        .and_then(|v| v.as_str())?;
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|text| !text.is_empty())?;
 
-    // Check both playlistItemData and watchEndpoint for videoId
     let video_id = item_renderer.pointer("/playlistItemData/videoId")
         .and_then(|v| v.as_str())
         .or_else(|| item_renderer.pointer("/navigationEndpoint/watchEndpoint/videoId").and_then(|v| v.as_str()))
-        .or_else(|| item_renderer.pointer("/overlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchEndpoint/videoId").and_then(|v| v.as_str()))?;
+        .or_else(|| item_renderer.pointer("/overlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchEndpoint/videoId").and_then(|v| v.as_str()))
+        .filter(|video_id| is_probable_video_id(video_id))
+        .map(|v| v.to_string());
 
     // Extract artist name robustly matching Metrolist logic
     let mut artist = "Unknown Artist".to_string();
@@ -242,16 +250,56 @@ fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Valu
     let thumbnail = extract_thumbnail(item_renderer);
     let duration_secs = extract_duration(item_renderer);
 
+    let browse_id = item_renderer.pointer("/navigationEndpoint/browseEndpoint/browseId")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+    let browse_params = item_renderer.pointer("/navigationEndpoint/browseEndpoint/params")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+
+    let video_id = video_id.unwrap_or_else(|| {
+        browse_id.clone().unwrap_or_else(|| title.to_lowercase().replace(' ', "-"))
+    });
+
     Some(serde_json::json!({
         "title": title,
         "videoId": video_id,
         "uploaderName": artist,
         "duration": duration_secs,
-        "thumbnail": thumbnail
+        "thumbnail": thumbnail,
+        "browseId": browse_id,
+        "browseParams": browse_params
     }))
 }
 
 // Helper to extract tracks from InnerTube search response
+fn parse_playlist_results(data: &Value) -> Vec<serde_json::Value> {
+    let mut tracks = Vec::new();
+
+    let section_list = data
+        .pointer("/contents/twoColumnBrowseResultsRenderer/secondaryContents/sectionListRenderer/contents")
+        .or_else(|| data.pointer("/contents/twoColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents"))
+        .and_then(|v| v.as_array());
+
+    if let Some(sections) = section_list {
+        for section in sections {
+            if let Some(shelf) = section.get("musicShelfRenderer") {
+                if let Some(items) = shelf.get("contents").and_then(|v| v.as_array()) {
+                    for item in items {
+                        if let Some(item_renderer) = item.get("musicResponsiveListItemRenderer") {
+                            if let Some(track) = extract_track_from_renderer(item_renderer) {
+                                tracks.push(track);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tracks
+}
+
 fn parse_search_results(data: &Value) -> Vec<serde_json::Value> {
     let mut tracks = Vec::new();
     
@@ -313,39 +361,174 @@ fn parse_home_results(data: &Value) -> Vec<serde_json::Value> {
         }
     }
 
-    if let Some(contents) = data.pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents") {
-        if let Some(carousels) = contents.as_array() {
-            for carousel_wrapper in carousels {
-                if let Some(carousel) = carousel_wrapper.get("musicCarouselShelfRenderer") {
-                    let title = carousel.pointer("/header/musicCarouselShelfBasicHeaderRenderer/title/runs/0/text")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("Featured");
+    let section_list = data
+        .pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents")
+        .or_else(|| data.pointer("/contents/sectionListRenderer/contents"))
+        .and_then(|v| v.as_array());
 
-                    let mut tracks = Vec::new();
-                    if let Some(items) = carousel.get("contents").and_then(|c| c.as_array()) {
-                        for item in items {
-                            let renderer = item.get("musicResponsiveListItemRenderer")
-                                .or_else(|| item.get("musicTwoRowItemRenderer"));
-                            
-                            if let Some(item_renderer) = renderer {
-                                if let Some(track) = extract_track_from_renderer(item_renderer) {
-                                    tracks.push(track);
-                                }
+    if let Some(carousels) = section_list {
+        for carousel_wrapper in carousels {
+            let carousel = carousel_wrapper.get("musicCarouselShelfRenderer")
+                .or_else(|| carousel_wrapper.get("musicImmersiveCarouselShelfRenderer"))
+                .or_else(|| carousel_wrapper.get("musicShelfRenderer"))
+                .or_else(|| carousel_wrapper.get("musicTastebuilderShelfRenderer"));
+
+            if let Some(carousel) = carousel {
+                let title = carousel.pointer("/header/musicCarouselShelfBasicHeaderRenderer/title/runs/0/text")
+                    .or_else(|| carousel.pointer("/header/musicCarouselShelfBasicHeaderRenderer/title/runs/0/text"))
+                    .or_else(|| carousel.pointer("/title/runs/0/text"))
+                    .and_then(|v| v.as_str())
+                    .or_else(|| carousel.pointer("/header/overlay/title/runs/0/text").and_then(|v| v.as_str()))
+                    .unwrap_or("Featured");
+
+                let mut tracks = Vec::new();
+                let items = carousel.get("contents")
+                    .or_else(|| carousel_wrapper.get("contents"))
+                    .and_then(|c| c.as_array());
+
+                if let Some(items) = items {
+                    for item in items {
+                        let renderer = item.get("musicResponsiveListItemRenderer")
+                            .or_else(|| item.get("musicTwoRowItemRenderer"))
+                            .or_else(|| item.get("musicSimpleGridItemRenderer"))
+                            .or_else(|| item.get("musicPlayButtonRenderer"));
+
+                        if let Some(item_renderer) = renderer {
+                            if let Some(track) = extract_track_from_renderer(item_renderer) {
+                                tracks.push(track);
                             }
                         }
                     }
-                    
-                    if !tracks.is_empty() {
-                        sections.push(serde_json::json!({
-                            "title": title,
-                            "items": tracks
-                        }));
-                    }
+                }
+
+                if !tracks.is_empty() {
+                    sections.push(serde_json::json!({
+                        "title": title,
+                        "items": tracks
+                    }));
                 }
             }
         }
     }
+
     sections
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_two_row_home_items_into_sections() {
+        let data = serde_json::json!({
+            "contents": {
+                "singleColumnBrowseResultsRenderer": {
+                    "tabs": [{
+                        "tabRenderer": {
+                            "content": {
+                                "sectionListRenderer": {
+                                    "contents": [{
+                                        "musicCarouselShelfRenderer": {
+                                            "header": {
+                                                "musicCarouselShelfBasicHeaderRenderer": {
+                                                    "title": {
+                                                        "runs": [{ "text": "New Releases" }]
+                                                    }
+                                                }
+                                            },
+                                            "contents": [{
+                                                "musicTwoRowItemRenderer": {
+                                                    "title": {
+                                                        "runs": [{ "text": "Song Name" }]
+                                                    },
+                                                    "subtitle": {
+                                                        "runs": [{ "text": "Artist Name" }]
+                                                    },
+                                                    "navigationEndpoint": {
+                                                        "watchEndpoint": {
+                                                            "videoId": "abc12345678"
+                                                        }
+                                                    },
+                                                    "thumbnailRenderer": {
+                                                        "musicThumbnailRenderer": {
+                                                            "thumbnail": {
+                                                                "thumbnails": [{ "url": "https://example.com/thumb.jpg" }]
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }]
+                                        }
+                                    }]
+                                }
+                            }
+                        }
+                    }]
+                }
+            }
+        });
+
+        let sections = parse_home_results(&data);
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0]["title"], "New Releases");
+        assert_eq!(sections[0]["items"][0]["title"], "Song Name");
+        assert_eq!(sections[0]["items"][0]["videoId"], "abc12345678");
+    }
+
+    #[test]
+    fn preserves_home_items_with_browse_targets() {
+        let data = serde_json::json!({
+            "contents": {
+                "singleColumnBrowseResultsRenderer": {
+                    "tabs": [{
+                        "tabRenderer": {
+                            "content": {
+                                "sectionListRenderer": {
+                                    "contents": [{
+                                        "musicCarouselShelfRenderer": {
+                                            "header": {
+                                                "musicCarouselShelfBasicHeaderRenderer": {
+                                                    "title": {
+                                                        "runs": [{ "text": "Browse Only" }]
+                                                    }
+                                                }
+                                            },
+                                            "contents": [{
+                                                "musicTwoRowItemRenderer": {
+                                                    "title": {
+                                                        "runs": [{ "text": "Playlist Name" }]
+                                                    },
+                                                    "subtitle": {
+                                                        "runs": [{ "text": "Artist Name" }]
+                                                    },
+                                                    "navigationEndpoint": {
+                                                        "browseEndpoint": {
+                                                            "browseId": "VLRDCLAK5uy_kiDNaS5nAXxdzsqFElFKKKs0GUEFJE26w"
+                                                        }
+                                                    },
+                                                    "thumbnailRenderer": {
+                                                        "musicThumbnailRenderer": {
+                                                            "thumbnail": {
+                                                                "thumbnails": [{ "url": "https://example.com/thumb.jpg" }]
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }]
+                                        }
+                                    }]
+                                }
+                            }
+                        }
+                    }]
+                }
+            }
+        });
+
+        let sections = parse_home_results(&data);
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0]["items"][0]["browseId"], "VLRDCLAK5uy_kiDNaS5nAXxdzsqFElFKKKs0GUEFJE26w");
+    }
 }
 
 #[tauri::command]
@@ -423,6 +606,42 @@ async fn search_yt_direct(query: String) -> Result<Vec<Value>, String> {
     let results = parse_search_results(&data);
     println!("search_yt_direct found {} results", results.len());
     Ok(results)
+}
+
+#[tauri::command]
+async fn get_playlist_tracks(browse_id: String, params: String) -> Result<Vec<Value>, String> {
+    println!("Fetching playlist tracks for browseId={} params={}", browse_id, params);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "browseId": browse_id,
+        "params": params
+    });
+
+    let res = client.post("https://music.youtube.com/youtubei/v1/browse")
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("Browse request failed: {}", e))?;
+
+    let data = res.json::<Value>()
+        .await
+        .map_err(|e| format!("Failed to parse playlist response: {}", e))?;
+
+    Ok(parse_playlist_results(&data))
 }
 
 #[tauri::command]
@@ -571,6 +790,7 @@ pub fn run() {
             greet,
             get_yt_home,
             search_yt_direct,
+            get_playlist_tracks,
             get_yt_stream_direct
         ])
         .run(tauri::generate_context!())

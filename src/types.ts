@@ -4,6 +4,8 @@ export interface Track {
   uploaderName: string;
   duration: number; // in seconds
   thumbnail: string;
+  browseId?: string;
+  browseParams?: string;
   isResolving?: boolean;
 }
 

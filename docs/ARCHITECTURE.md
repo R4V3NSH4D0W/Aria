@@ -8,7 +8,7 @@ This app is a native macOS desktop YouTube Music player built with:
 
 ## Reference Project
 
-This app is modelled after [Metrolist](file:///Volumes/Extended/desktop_apps/Metrolist), an Android YouTube Music client written in Kotlin.
+This app is modelled after [Metrolist](file:///Volumes/Extended/desktop_apps/Metrolist), the local MetroList project, an Android YouTube Music client written in Kotlin.
 Its InnerTube layer lives at:
 
 ```
