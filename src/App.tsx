@@ -135,12 +135,19 @@ export default function App() {
 
   // Play track (Resolves unencrypted stream directly from YouTube client in Rust)
   const playTrack = async (track: Track, newQueue?: Track[]) => {
-    if (track.browseId && track.videoId === track.title.toLowerCase().replace(/\s+/g, "-")) {
+    if (
+      track.browseId &&
+      track.videoId === track.title.toLowerCase().replace(/\s+/g, "-")
+    ) {
       await openBrowseTarget(track);
       return;
     }
 
-    if (track.browseId && !track.videoId.startsWith("http") && track.videoId.length !== 11) {
+    if (
+      track.browseId &&
+      !track.videoId.startsWith("http") &&
+      track.videoId.length !== 11
+    ) {
       await openBrowseTarget(track);
       return;
     }

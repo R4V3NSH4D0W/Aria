@@ -70,7 +70,10 @@ export const Home: React.FC<HomeProps> = ({
     const pickSection = (keywords: string[]) => {
       const match = ranked.find((section) => {
         const title = section.title.toLowerCase();
-        return !usedTitles.has(section.title) && keywords.some((keyword) => title.includes(keyword));
+        return (
+          !usedTitles.has(section.title) &&
+          keywords.some((keyword) => title.includes(keyword))
+        );
       });
 
       if (match) {
@@ -88,13 +91,18 @@ export const Home: React.FC<HomeProps> = ({
     };
 
     return {
-      newReleaseSection: pickSection(["new release", "new releases", "new music"]),
+      newReleaseSection: pickSection([
+        "new release",
+        "new releases",
+        "new music",
+      ]),
       coverAndMixSection: pickSection(["cover", "mix"]),
       quickPickSection: pickSection(["quick", "pick"]),
     };
   }, [sections]);
 
-  const { newReleaseSection, coverAndMixSection, quickPickSection } = featuredSections;
+  const { newReleaseSection, coverAndMixSection, quickPickSection } =
+    featuredSections;
 
   const remainingSections = useMemo(() => {
     const featuredTitles = new Set<string>();
@@ -106,11 +114,12 @@ export const Home: React.FC<HomeProps> = ({
   }, [sections, newReleaseSection, coverAndMixSection, quickPickSection]);
 
   const fallbackTracks = useMemo(() => {
-    const baseTracks = discoverTracks.length > 0
-      ? discoverTracks
-      : favorites.length > 0
-        ? [...favorites].sort(() => Math.random() - 0.5)
-        : [];
+    const baseTracks =
+      discoverTracks.length > 0
+        ? discoverTracks
+        : favorites.length > 0
+          ? [...favorites].sort(() => Math.random() - 0.5)
+          : [];
 
     return {
       newReleases: baseTracks.slice(0, 6),
