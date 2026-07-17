@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Music, AlertCircle } from "lucide-react";
-import { Track, Playlist, SearchResultItem, ArtistDetails } from "./types";
+import { Music, AlertCircle, Play, Shuffle } from "lucide-react";
+import { Track, Playlist, SearchResultItem, ArtistDetails, YtPlaylist } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { TrackItem } from "./components/TrackItem";
@@ -10,6 +10,8 @@ import { ArtistDetailsView } from "./components/ArtistDetailsView";
 import { Player } from "./components/Player";
 import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
 import { QueuePanel } from "./components/QueuePanel.tsx";
+import { Home } from "./components/Home";
+import { Settings } from "./components/Settings";
 
 export default function App() {
   // Search state
@@ -38,6 +40,7 @@ export default function App() {
 
   // Playlists & Favorites (Stored in localStorage)
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [ytPlaylists, setYtPlaylists] = useState<YtPlaylist[]>([]);
   const [favorites, setFavorites] = useState<Track[]>([]);
   const [favoriteSort, setFavoriteSort] = useState<
     "recent" | "oldest" | "title"
@@ -46,7 +49,8 @@ export default function App() {
     const saved = localStorage.getItem("aria_recently_played");
     return saved ? JSON.parse(saved) : [];
   });
-  const [activeTab, setActiveTab] = useState<string>("search");
+  const [activeTab, setActiveTab] = useState<string>("home");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<
@@ -59,7 +63,7 @@ export default function App() {
   // Guard: prevent auto-advance from firing multiple times on the same track end
   const autoAdvancedRef = useRef(false);
 
-  // Load playlists & favorites on start
+  // Load playlists, favorites & YT session on start
   useEffect(() => {
     try {
       let savedPlaylists = localStorage.getItem("aria_playlists");
@@ -73,6 +77,16 @@ export default function App() {
         savedFavorites = localStorage.getItem("metrolist_favorites");
       }
       if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
+
+      // Restore cached YT playlists so Sidebar shows them without visiting Settings
+      const cachedYt = localStorage.getItem("aria_yt_playlists");
+      if (cachedYt) setYtPlaylists(JSON.parse(cachedYt));
+
+      // Push saved cookie back into Rust backend on every app start
+      const savedCookie = localStorage.getItem("aria_yt_cookie");
+      if (savedCookie) {
+        invoke("set_auth_token", { cookie: savedCookie }).catch(console.error);
+      }
     } catch (e) {
       console.error("Failed to load local storage data", e);
     }
@@ -126,7 +140,7 @@ export default function App() {
       console.error("Track metadata error:", err);
     }
 
-    return { ...track, duration: 0 };
+    return track;
   };
 
   // Perform search (Directly queries YouTube Music InnerTube API from local Rust backend)
@@ -151,16 +165,43 @@ export default function App() {
             return resolveTrackDuration(item);
           }),
         );
-        const filteredItems = resolvedItems.filter(
-          (item) => item.type === "artist" || (item.duration !== undefined && item.duration > 0),
-        );
-        setSearchResults(filteredItems);
+        setSearchResults(resolvedItems);
       } else {
         setSearchError("No music tracks found on YouTube Music.");
       }
     } catch (err) {
       console.error("Search error:", err);
       setSearchError("Direct search failed. Please verify your connection.");
+    }
+    setLoading(false);
+  };
+
+  const handleExploreGenre = async (genre: string) => {
+    setSearchQuery(genre);
+    setActiveTab("search");
+    setHasSearched(true);
+    setLoading(true);
+    setSearchError("");
+    setSearchResults([]);
+    setSelectedArtist(null);
+    try {
+      const items = await invoke<SearchResultItem[]>("search_yt_direct", {
+        query: genre,
+      });
+      if (items && items.length > 0) {
+        const resolvedItems = await Promise.all(
+          items.map(async (item) => {
+            if (item.type === "artist") return item;
+            return resolveTrackDuration(item);
+          }),
+        );
+        setSearchResults(resolvedItems);
+      } else {
+        setSearchError("No music tracks found on YouTube Music.");
+      }
+    } catch (err) {
+      console.error("Explore genre search failed:", err);
+      setSearchError("Explore failed. Please verify your connection.");
     }
     setLoading(false);
   };
@@ -496,7 +537,7 @@ export default function App() {
         const resolvedSongs = await Promise.all(
           details.songs.map((track) => resolveTrackDuration(track)),
         );
-        details.songs = resolvedSongs.filter((track) => track.duration !== undefined && track.duration > 0);
+        details.songs = resolvedSongs;
       }
       setSelectedArtist(details);
     } catch (err) {
@@ -604,16 +645,19 @@ export default function App() {
       />
 
       <div className="flex flex-1 overflow-hidden z-10">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={handleTabChange}
-          playlists={playlists}
-          deletePlaylist={(id, e) => {
-            deletePlaylist(id, e);
-            setSelectedArtist(null);
-          }}
-          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-        />
+        {isSidebarOpen && (
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={handleTabChange}
+            playlists={playlists}
+            ytPlaylists={ytPlaylists}
+            deletePlaylist={(id, e) => {
+              deletePlaylist(id, e);
+              setSelectedArtist(null);
+            }}
+            setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+          />
+        )}
 
         {/* Main Content Area */}
         <section
@@ -627,6 +671,9 @@ export default function App() {
             handleSearch={handleSearch}
             favoriteSort={favoriteSort}
             setFavoriteSort={setFavoriteSort}
+            isSidebarOpen={isSidebarOpen}
+            toggleSidebar={() => setIsSidebarOpen((open) => !open)}
+            onOpenSettings={() => setActiveTab("settings")}
           />
 
           <div
@@ -663,6 +710,20 @@ export default function App() {
                   isFavorite={isFavorite}
                   setShowCreatePlaylistModal={setShowCreatePlaylistModal}
                 />
+              ) : activeTab === "home" ? (
+                <Home
+                  playTrack={playTrack}
+                  playSongs={playSongs}
+                  currentTrack={currentTrack}
+                  isPlaying={isPlaying}
+                  favorites={favorites}
+                  playlists={playlists}
+                  recentlyPlayed={recentlyPlayed}
+                  onOpenTab={setActiveTab}
+                  onExploreGenre={handleExploreGenre}
+                />
+              ) : activeTab === "settings" ? (
+                <Settings onPlaylistsSync={setYtPlaylists} />
               ) : (
                 <>
                   {artistError && (
@@ -710,7 +771,26 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        (activeTab === "search" ? searchResults : getActiveTracks()).map((item, idx) => {
+                        <>
+                          {activeTab !== "search" && activeTab !== "home" && getActiveTracks().length > 0 && (
+                            <div className="flex items-center gap-4 mb-6 px-1 shrink-0">
+                              <button
+                                onClick={() => playSongs(getActiveTracks(), false)}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all duration-300 shadow-lg shadow-indigo-600/25 cursor-pointer hover:-translate-y-0.5"
+                              >
+                                <Play className="w-4 h-4 fill-white" />
+                                <span>Play All</span>
+                              </button>
+                              <button
+                                onClick={() => playSongs(getActiveTracks(), true)}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 hover:border-white/20 font-bold text-sm transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
+                              >
+                                <Shuffle className="w-4 h-4 text-indigo-400" />
+                                <span>Shuffle</span>
+                              </button>
+                            </div>
+                          )}
+                          {(activeTab === "search" ? searchResults : getActiveTracks()).map((item, idx) => {
                           if ("type" in item && item.type === "artist") {
                             return (
                               <ArtistItem
@@ -745,7 +825,8 @@ export default function App() {
                               }
                             />
                           );
-                        })
+                        })}
+                        </>
                       )}
                     {activeTab === "search" &&
                       hasSearched &&
@@ -830,6 +911,9 @@ export default function App() {
           handleVolumeChange={handleVolumeChange}
           handleNext={handleNext}
           handlePrev={handlePrev}
+          playlists={playlists}
+          addTrackToPlaylist={addTrackToPlaylist}
+          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
         />
       )}
 

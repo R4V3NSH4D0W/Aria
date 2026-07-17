@@ -1,6 +1,6 @@
-import React from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2 } from "lucide-react";
-import { Track } from "../types";
+import React, { useState, useEffect, useRef } from "react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2, Plus } from "lucide-react";
+import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
 interface PlayerProps {
@@ -23,6 +23,9 @@ interface PlayerProps {
   handleVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleNext: () => void;
   handlePrev: () => void;
+  playlists: Playlist[];
+  addTrackToPlaylist: (playlistId: string, track: Track) => void;
+  setShowCreatePlaylistModal: (show: boolean) => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -45,7 +48,23 @@ export const Player: React.FC<PlayerProps> = ({
   handleVolumeChange,
   handleNext,
   handlePrev,
+  playlists,
+  addTrackToPlaylist,
+  setShowCreatePlaylistModal,
 }) => {
+  const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
+  const playlistMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (playlistMenuRef.current && !playlistMenuRef.current.contains(e.target as Node)) {
+        setPlaylistMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
   return (
     <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up">
       {/* Left: Track Info */}
@@ -81,6 +100,48 @@ export const Player: React.FC<PlayerProps> = ({
         >
           <Heart className={`w-4.5 h-4.5 ${isFavorite(currentTrack) ? "fill-pink-500" : ""}`} />
         </button>
+
+        {/* Add to Playlist button */}
+        <div ref={playlistMenuRef} className="relative shrink-0 flex items-center">
+          <button
+            onClick={() => setPlaylistMenuOpen(!playlistMenuOpen)}
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer"
+            title="Add to Playlist"
+          >
+            <Plus className="w-4.5 h-4.5" />
+          </button>
+          
+          {playlistMenuOpen && (
+            <div className="absolute left-0 bottom-full mb-2 w-48 overflow-hidden rounded-2xl border border-white/10 bg-[#12151b] shadow-2xl z-40">
+              <div className="px-4 py-2 text-xs font-bold text-slate-500 border-b border-white/5 uppercase tracking-wider select-none">
+                Add to Playlist
+              </div>
+              <div className="max-h-40 overflow-y-auto">
+                {playlists.map((playlist) => (
+                  <button
+                    key={playlist.id}
+                    onClick={() => {
+                      addTrackToPlaylist(playlist.id, currentTrack);
+                      setPlaylistMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-all cursor-pointer truncate"
+                  >
+                    {playlist.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowCreatePlaylistModal(true);
+                  setPlaylistMenuOpen(false);
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm text-indigo-400 hover:bg-white/5 font-semibold border-t border-white/5 transition-all cursor-pointer"
+              >
+                + Create Playlist
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Center: Playback Progress & Controls */}

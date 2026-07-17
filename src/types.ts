@@ -38,3 +38,10 @@ export interface HomeSection {
   items: Track[];
 }
 
+// YouTube Music user playlist (fetched via auth cookie)
+export interface YtPlaylist {
+  id: string;      // browseId e.g. VLPLxxxxxxxx
+  title: string;
+  thumbnail: string;
+  subtitle: string; // e.g. "12 songs"
+}

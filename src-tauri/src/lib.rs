@@ -3,6 +3,37 @@ use std::sync::Mutex;
 
 // Global storage for YouTube visitor/session token
 static VISITOR_DATA: Mutex<String> = Mutex::new(String::new());
+// Global storage for user-provided auth cookie
+static AUTH_COOKIE: Mutex<String> = Mutex::new(String::new());
+
+#[tauri::command]
+fn set_auth_token(cookie: String) -> Result<(), String> {
+    println!("set_auth_token: storing {} chars of cookie", cookie.len());
+    if let Ok(mut guard) = AUTH_COOKIE.lock() {
+        *guard = cookie;
+        Ok(())
+    } else {
+        Err("Failed to acquire AUTH_COOKIE lock".to_string())
+    }
+}
+
+#[tauri::command]
+fn get_auth_token() -> String {
+    if let Ok(guard) = AUTH_COOKIE.lock() {
+        guard.clone()
+    } else {
+        "".to_string()
+    }
+}
+
+fn get_cookie_header() -> Option<String> {
+    if let Ok(guard) = AUTH_COOKIE.lock() {
+        if !guard.is_empty() {
+            return Some(guard.clone());
+        }
+    }
+    None
+}
 
 fn extract_artist_from_runs(runs: &Vec<Value>) -> String {
     // 1. Try to find a run linked to an artist/channel page (browseId starting with UC or FEs)
@@ -265,12 +296,16 @@ fn extract_artist_from_renderer(item_renderer: &Value) -> Option<serde_json::Val
         }
     }
 
+    // Mirror Metrolist: if shuffleEndpoint (shufflePlaylistId) is None, return None.
+    // This filters out artists with 0 tracks (or profiles without music).
+    let shuffle_id = shuffle_playlist_id?;
+
     Some(serde_json::json!({
         "type": "artist",
         "browseId": browse_id,
         "title": title,
         "thumbnail": thumbnail,
-        "shufflePlaylistId": shuffle_playlist_id
+        "shufflePlaylistId": shuffle_id
     }))
 }
 
@@ -433,11 +468,14 @@ async fn get_yt_home() -> Result<Vec<Value>, String> {
         "browseId": "FEmusic_home"
     });
 
-    let res = client.post("https://music.youtube.com/youtubei/v1/browse")
+    let mut req = client.post("https://music.youtube.com/youtubei/v1/browse")
         .json(&payload)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
-        .header("Content-Type", "application/json")
-        .send()
+        .header("Content-Type", "application/json");
+    if let Some(cookie) = get_cookie_header() {
+        req = req.header("Cookie", cookie);
+    }
+    let res = req.send()
         .await
         .map_err(|e| format!("Browse request failed: {}", e))?;
 
@@ -467,11 +505,14 @@ async fn search_yt_direct(query: String) -> Result<Vec<Value>, String> {
         "query": query
     });
 
-    let res = client.post("https://music.youtube.com/youtubei/v1/search")
+    let mut req = client.post("https://music.youtube.com/youtubei/v1/search")
         .json(&payload)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
-        .header("Content-Type", "application/json")
-        .send()
+        .header("Content-Type", "application/json");
+    if let Some(cookie) = get_cookie_header() {
+        req = req.header("Cookie", cookie);
+    }
+    let res = req.send()
         .await
         .map_err(|e| {
             println!("search error: {}", e);
@@ -548,12 +589,17 @@ async fn get_yt_stream_direct(video_id: String) -> Result<String, String> {
     println!("Using session visitorData: {}", visitor_data);
 
     // Context including active visitorData to bypass LOGIN_REQUIRED anti-bot blocks
+    // Mimics Metrolist's preferred VISIONOS client to prevent bot-detection issues
     let payload = serde_json::json!({
         "context": {
             "client": {
-                "clientName": "ANDROID_VR",
-                "clientVersion": "1.61.48",
-                "userAgent": "com.google.android.apps.youtube.vr.oculus/1.61.48 (Linux; U; Android 12; en_US; Oculus Quest 3; Build/SQ3A.220605.009.A1; Cronet/132.0.6808.3)",
+                "clientName": "VISIONOS",
+                "clientVersion": "0.1",
+                "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+                "osName": "visionOS",
+                "osVersion": "1.3.21O771",
+                "deviceMake": "Apple",
+                "deviceModel": "RealityDevice14,1",
                 "hl": "en",
                 "gl": "US",
                 "visitorData": visitor_data
@@ -564,7 +610,7 @@ async fn get_yt_stream_direct(video_id: String) -> Result<String, String> {
 
     let res = client.post("https://www.youtube.com/youtubei/v1/player")
         .json(&payload)
-        .header("User-Agent", "com.google.android.apps.youtube.vr.oculus/1.61.48 (Linux; U; Android 12; en_US; Oculus Quest 3; Build/SQ3A.220605.009.A1; Cronet/132.0.6808.3)")
+        .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15")
         .header("Content-Type", "application/json")
         .send()
         .await
@@ -784,16 +830,147 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+async fn get_yt_user_playlists() -> Result<Vec<Value>, String> {
+    println!("get_yt_user_playlists: fetching user playlists");
+
+    let cookie = match get_cookie_header() {
+        Some(c) => c,
+        None => return Err("No auth cookie set. Please add your cookie in Settings.".to_string()),
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "browseId": "FEmusic_liked_playlists"
+    });
+
+    let res = client
+        .post("https://music.youtube.com/youtubei/v1/browse")
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json")
+        .header("Cookie", cookie)
+        .header("X-Goog-AuthUser", "0")
+        .header("Origin", "https://music.youtube.com")
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let data = res.json::<Value>().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    // Parse grid items from the response
+    let mut playlists: Vec<Value> = Vec::new();
+
+    // Try singleColumnBrowseResultsRenderer path
+    let items_path = data
+        .pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/gridRenderer/items")
+        .or_else(|| data.pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicShelfRenderer/contents"));
+
+    if let Some(items) = items_path.and_then(|v| v.as_array()) {
+        for item in items {
+            // Try musicTwoRowItemRenderer (grid card)
+            if let Some(renderer) = item.get("musicTwoRowItemRenderer") {
+                let title = renderer
+                    .pointer("/title/runs/0/text")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let browse_id = renderer
+                    .pointer("/navigationEndpoint/browseEndpoint/browseId")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let thumbnail = renderer
+                    .pointer("/thumbnailRenderer/musicThumbnailRenderer/thumbnail/thumbnails")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| arr.last())
+                    .and_then(|t| t.get("url"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let subtitle = renderer
+                    .pointer("/subtitle/runs/0/text")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                if !browse_id.is_empty() && !title.is_empty() && browse_id != "VLLM" {
+                    playlists.push(serde_json::json!({
+                        "id": browse_id,
+                        "title": title,
+                        "thumbnail": thumbnail,
+                        "subtitle": subtitle
+                    }));
+                }
+            }
+            // Try musicResponsiveListItemRenderer (list view)
+            else if let Some(renderer) = item.get("musicResponsiveListItemRenderer") {
+                let title = renderer
+                    .pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer/text/runs/0/text")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let browse_id = renderer
+                    .pointer("/navigationEndpoint/browseEndpoint/browseId")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let thumbnail = renderer
+                    .pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| arr.last())
+                    .and_then(|t| t.get("url"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                if !browse_id.is_empty() && !title.is_empty() {
+                    playlists.push(serde_json::json!({
+                        "id": browse_id,
+                        "title": title,
+                        "thumbnail": thumbnail,
+                        "subtitle": ""
+                    }));
+                }
+            }
+        }
+    }
+
+    println!("get_yt_user_playlists: found {} playlists", playlists.len());
+    Ok(playlists)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
+            set_auth_token,
+            get_auth_token,
             get_yt_home,
             search_yt_direct,
             get_yt_stream_direct,
-            get_yt_artist
+            get_yt_artist,
+            get_yt_user_playlists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
