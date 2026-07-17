@@ -184,6 +184,32 @@ export default function App() {
     );
   };
 
+  const handleNext = () => {
+    if (queue.length === 0 || !currentTrack) return;
+    const currentIndex = queue.findIndex(
+      (t) => t.videoId === currentTrack.videoId,
+    );
+    let nextIndex = currentIndex + 1;
+    if (isShuffled) {
+      nextIndex = Math.floor(Math.random() * queue.length);
+    } else if (nextIndex >= queue.length) {
+      nextIndex = 0; // Loop back to start
+    }
+    playTrack(queue[nextIndex]);
+  };
+
+  const handlePrev = () => {
+    if (queue.length === 0 || !currentTrack) return;
+    const currentIndex = queue.findIndex(
+      (t) => t.videoId === currentTrack.videoId,
+    );
+    let prevIndex = currentIndex === -1 ? queue.length - 1 : currentIndex - 1;
+    if (prevIndex < 0) {
+      prevIndex = queue.length - 1;
+    }
+    playTrack(queue[prevIndex]);
+  };
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !resolvedAudioUrl) return;
@@ -207,6 +233,37 @@ export default function App() {
       audio.removeEventListener("canplay", onCanPlay);
     };
   }, [resolvedAudioUrl]);
+
+  // Media Session API for macOS/Windows/Android lockscreen and control center
+  useEffect(() => {
+    if ("mediaSession" in navigator && currentTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.uploaderName,
+        artwork: [
+          {
+            src: currentTrack.thumbnail,
+            sizes: "512x512",
+            type: "image/jpeg",
+          },
+        ],
+      });
+
+      navigator.mediaSession.setActionHandler("play", () => {
+        if (audioRef.current) {
+          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+        }
+      });
+      navigator.mediaSession.setActionHandler("previoustrack", handlePrev);
+      navigator.mediaSession.setActionHandler("nexttrack", handleNext);
+    }
+  }, [currentTrack, handlePrev, handleNext]);
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -276,31 +333,7 @@ export default function App() {
     }
   };
 
-  const handleNext = () => {
-    if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(
-      (t) => t.videoId === currentTrack.videoId,
-    );
-    let nextIndex = currentIndex + 1;
-    if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * queue.length);
-    } else if (nextIndex >= queue.length) {
-      nextIndex = 0; // Loop back to start
-    }
-    playTrack(queue[nextIndex]);
-  };
 
-  const handlePrev = () => {
-    if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(
-      (t) => t.videoId === currentTrack.videoId,
-    );
-    let prevIndex = currentIndex === -1 ? queue.length - 1 : currentIndex - 1;
-    if (prevIndex < 0) {
-      prevIndex = queue.length - 1;
-    }
-    playTrack(queue[prevIndex]);
-  };
 
   const addTrackToQueue = async (track: Track) => {
     if (queue.some((item) => item.videoId === track.videoId)) return;

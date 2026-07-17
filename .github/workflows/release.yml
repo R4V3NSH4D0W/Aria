@@ -32,7 +32,7 @@ jobs:
 
       - name: install frontend dependencies
         run: |
-          pnpm config set policies.minimum-release-age 0
+          echo "policies.minimum-release-age=0" >> .npmrc
           pnpm install
 
       - name: install Rust stable
