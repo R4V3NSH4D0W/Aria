@@ -31,4 +31,5 @@ src-tauri/target/
 .env.*
 
 # Documentation
-docs/
+docs/*
+!docs/.gitkeep

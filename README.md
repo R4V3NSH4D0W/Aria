@@ -1,91 +1,147 @@
-# Aria Music Player 🎵
+# Aria 🎵
 
-Aria is a sleek, modern, cross-platform desktop music player built with **Tauri**, **React**, **TypeScript**, and **Tailwind CSS**. It leverages a custom Rust backend to search and stream music directly from YouTube, providing an ad-free, lightweight listening experience with a beautiful user interface.
+<div align="center">
+
+A modern, lightweight, cross-platform desktop music player built with **Tauri**, **React**, and **Rust**.
+
+Fast • Native • Beautiful
+
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
+![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+</div>
+
+---
 
 ## ✨ Features
 
-- **Direct Music Streaming**: Search and play music seamlessly. The Rust backend handles parsing and direct audio stream extraction.
-- **Rich Homepage**: Discover new music instantly with curated carousels fetched directly from the YouTube Music homepage (Quick Picks, Trending, New Releases).
-- **Modern Minimalist UI**: A gorgeous dark-mode interface built with Tailwind CSS, featuring glassmorphism elements, micro-animations, and a highly polished custom media player.
-- **Playlists & Favorites**: Create custom playlists, favorite your top tracks, and organize your music library locally.
-- **Smart Search**: Filters out podcasts and irrelevant videos to ensure you're only searching for high-quality music tracks.
-- **Lightweight & Fast**: Powered by Tauri (Rust), Aria uses a fraction of the memory compared to Electron-based music players.
+- 🎵 Modern desktop music player
+- ⚡ Native performance powered by Rust and Tauri
+- 🎨 Clean and responsive user interface
+- 📚 Playlist management
+- ❤️ Favorites library
+- 🔍 Fast music search
+- ⏯️ Rich playback controls
+- 🎧 Queue management
+- 🌙 Beautiful dark theme
+- 💻 Cross-platform support
 
-## 🛠️ Tech Stack
+---
 
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide React (icons)
-- **Backend**: Rust, Tauri
-- **State Management**: React Hooks (Custom App State)
+## 📸 Screenshots
+
+> Screenshots coming soon.
+
+---
+
+## 🚀 Tech Stack
+
+### Frontend
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Lucide React
+
+### Backend
+
+- Rust
+- Tauri v2
+
+---
+
+## 🖥️ Supported Platforms
+
+| Platform              | Status |
+| --------------------- | ------ |
+| Windows               | ✅     |
+| macOS (Apple Silicon) | ✅     |
+| Linux                 | ✅     |
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js (v18+)
+- Node.js 22+
 - pnpm
-- Rust and Cargo
-- System dependencies for Tauri (e.g., Xcode command line tools for macOS, build-essential for Linux)
+- Rust
+- Cargo
 
-### Installation
+### Clone
 
-1. **Clone the repository**
+```bash
+git clone https://github.com/<your-username>/Aria.git
+cd Aria
+```
 
-   ```bash
-   git clone <repository-url>
-   cd demo_tauri_app
-   ```
+### Install
 
-2. **Install dependencies**
+```bash
+pnpm install
+```
 
-   ```bash
-   pnpm install
-   ```
+### Development
 
-3. **Run in Development Mode**
+```bash
+pnpm tauri dev
+```
 
-   ```bash
-   pnpm tauri dev
-   ```
+### Production Build
 
-   This will start the Vite dev server and open the Aria desktop window.
+```bash
+pnpm tauri build
+```
 
-4. **Build for Production**
-   ```bash
-   pnpm tauri build
-   ```
-   This will create a standalone executable for your operating system in the `src-tauri/target/release/bundle` directory.
+Build output is generated in:
 
-## 🎨 Design Philosophy
+```
+src-tauri/target/release/bundle
+```
 
-Aria is designed to be visually stunning. We prioritize:
+---
 
-- **Aesthetics**: Curated dark palettes (`#08090a`, `#12151b`) with subtle indigo and pink accents.
-- **Interactivity**: Custom linear-gradient sliders for volume and playback progress, hover effects, and smooth transitions.
-- **Focus**: No clutter, no ads—just you and your music.
+## 📂 Project Structure
 
-## 📚 Documentation
+```
+.
+├── src
+├── src-tauri
+├── public
+├── docs
+├── package.json
+└── README.md
+```
 
-For deeper technical insights, please refer to the files in the [`/docs`](./docs) folder:
+---
 
-- [**Architecture**](./docs/ARCHITECTURE.md): Learn about the system design and how the React frontend communicates with the Rust backend.
-- [**YouTube API Integration**](./docs/YOUTUBE_API.md): Details on how Aria directly fetches YouTube streams and bypasses playback restrictions.
-- [**Search Parsing**](./docs/SEARCH_PARSING.md): Explanation of how Aria parses and filters YouTube Music search results (e.g. dropping non-music episodes).
-- [**Bugfixes & History**](./docs/BUGFIXES.md): A log of critical bugfixes, error handling implementations, and troubleshooting steps.
+## 🎯 Goals
+
+Aria focuses on providing:
+
+- Native desktop performance
+- Low memory usage
+- Smooth user experience
+- Modern interface
+- Cross-platform compatibility
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome.
+
+If you find a bug or have an idea for a new feature, feel free to open an issue or submit a pull request.
+
+---
 
 ## 📄 License
 
-This project is currently distributed under the MIT License.
+Licensed under the MIT License.
 
-## ⚠️ Usage Notice
-
-Aria is intended for personal, non-commercial use only.
-
-- Do not redistribute, resell, or rebrand this app without reviewing the legal and licensing implications first.
-- You are responsible for making sure your use of the app complies with applicable laws, copyright rules, and YouTube's terms.
-- The app is provided as-is, without warranty of any kind.
-- This notice is informational only and does not override the MIT License.
-- This notice is not legal advice and does not guarantee protection from legal claims, takedowns, or enforcement actions.
-
-If you want enforceable personal-use-only restrictions, you need to change the license and get legal advice before distributing builds.
-
-# Aria
+See the LICENSE file for details.
