@@ -264,7 +264,10 @@ export default function App() {
 
       navigator.mediaSession.setActionHandler("play", () => {
         if (audioRef.current) {
-          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+          audioRef.current
+            .play()
+            .then(() => setIsPlaying(true))
+            .catch(() => {});
         }
       });
       navigator.mediaSession.setActionHandler("pause", () => {
@@ -345,8 +348,6 @@ export default function App() {
       setProgress(seekTime);
     }
   };
-
-
 
   const addTrackToQueue = async (track: Track) => {
     if (queue.some((item) => item.videoId === track.videoId)) return;
@@ -524,7 +525,9 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <section className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? 'pb-36' : ''}`}>
+        <section
+          className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? "pb-36" : ""}`}
+        >
           <Header
             activeTab={activeTab}
             playlists={playlists}
