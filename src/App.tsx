@@ -7,7 +7,7 @@ import { Header } from "./components/Header";
 import { TrackItem } from "./components/TrackItem";
 import { Player } from "./components/Player";
 import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
-import { Home } from "./components/Home";
+import { QueuePanel } from "./components/QueuePanel.tsx";
 
 export default function App() {
   // Search state
@@ -32,10 +32,16 @@ export default function App() {
   // Playlists & Favorites (Stored in localStorage)
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [favorites, setFavorites] = useState<Track[]>([]);
-  const [activeTab, setActiveTab] = useState<"home" | "search" | "favorites" | string>("home");
+  const [favoriteSort, setFavoriteSort] = useState<
+    "recent" | "oldest" | "title"
+  >("recent");
+  const [activeTab, setActiveTab] = useState<string>("search");
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
-  const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<string | null>(null);
+  const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<
+    string | null
+  >(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Audio Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -50,7 +56,7 @@ export default function App() {
         savedPlaylists = localStorage.getItem("metrolist_playlists");
       }
       if (savedPlaylists) setPlaylists(JSON.parse(savedPlaylists));
-      
+
       let savedFavorites = localStorage.getItem("aria_favorites");
       if (!savedFavorites) {
         savedFavorites = localStorage.getItem("metrolist_favorites");
@@ -80,19 +86,45 @@ export default function App() {
     localStorage.setItem("aria_favorites", JSON.stringify(updated));
   };
 
+  const resolveTrackDuration = async (track: Track): Promise<Track> => {
+    try {
+      const rawJson = await invoke<string>("get_yt_stream_direct", {
+        videoId: track.videoId,
+      });
+      const streamData = JSON.parse(rawJson) as {
+        url: string;
+        duration: number;
+      };
+
+      if (streamData.duration > 0) {
+        return { ...track, duration: streamData.duration };
+      }
+    } catch (err) {
+      console.error("Track metadata error:", err);
+    }
+
+    return track;
+  };
+
   // Perform search (Directly queries YouTube Music InnerTube API from local Rust backend)
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
 
+    setHasSearched(true);
     setLoading(true);
     setSearchError("");
     setSearchResults([]);
 
     try {
-      const tracks = await invoke<Track[]>("search_yt_direct", { query: searchQuery });
+      const tracks = await invoke<Track[]>("search_yt_direct", {
+        query: searchQuery,
+      });
       if (tracks && tracks.length > 0) {
-        setSearchResults(tracks);
+        const tracksWithDurations = await Promise.all(
+          tracks.map((track) => resolveTrackDuration(track)),
+        );
+        setSearchResults(tracksWithDurations);
       } else {
         setSearchError("No music tracks found on YouTube Music.");
       }
@@ -104,7 +136,7 @@ export default function App() {
   };
 
   // Play track (Resolves unencrypted stream directly from YouTube client in Rust)
-  const playTrack = async (track: Track, newQueue?: Track[]) => {
+  const playTrack = async (track: Track) => {
     setPlaybackError("");
     setIsPlaying(false);
     setResolvedAudioUrl(null);
@@ -113,18 +145,21 @@ export default function App() {
     autoAdvancedRef.current = false; // reset guard for new track
 
     // Set loading indicator
-    setSearchResults(prev => prev.map(t => t.videoId === track.videoId ? { ...t, isResolving: true } : t));
+    setSearchResults((prev) =>
+      prev.map((t) =>
+        t.videoId === track.videoId ? { ...t, isResolving: true } : t,
+      ),
+    );
     setCurrentTrack({ ...track, isResolving: true });
 
-    if (newQueue) {
-      setQueue(newQueue);
-    } else if (!queue.some(t => t.videoId === track.videoId)) {
-      setQueue(prev => [...prev, track]);
-    }
-
     try {
-      const rawJson = await invoke<string>("get_yt_stream_direct", { videoId: track.videoId });
-      const streamData = JSON.parse(rawJson) as { url: string; duration: number };
+      const rawJson = await invoke<string>("get_yt_stream_direct", {
+        videoId: track.videoId,
+      });
+      const streamData = JSON.parse(rawJson) as {
+        url: string;
+        duration: number;
+      };
       if (streamData.url) {
         setResolvedAudioUrl(streamData.url);
         setCurrentTrack({ ...track, isResolving: false });
@@ -142,7 +177,11 @@ export default function App() {
     }
 
     // Remove loading indicators
-    setSearchResults(prev => prev.map(t => t.videoId === track.videoId ? { ...t, isResolving: false } : t));
+    setSearchResults((prev) =>
+      prev.map((t) =>
+        t.videoId === track.videoId ? { ...t, isResolving: false } : t,
+      ),
+    );
   };
 
   useEffect(() => {
@@ -151,9 +190,10 @@ export default function App() {
 
     // Wait for canplay before calling .play() — prevents AbortError
     const onCanPlay = () => {
-      audio.play()
+      audio
+        .play()
         .then(() => setIsPlaying(true))
-        .catch(err => {
+        .catch((err) => {
           if (err?.name === "AbortError") return; // benign: interrupted by a new load
           console.error("Playback error:", err);
           setPlaybackError("Audio playback failed. Try again.");
@@ -186,7 +226,9 @@ export default function App() {
     if (audioRef.current) {
       const audioDur = audioRef.current.duration;
       // Only use audio element duration as fallback
-      setDuration(prev => (prev > 0 ? prev : (isFinite(audioDur) ? audioDur : 0)));
+      setDuration((prev) =>
+        prev > 0 ? prev : isFinite(audioDur) ? audioDur : 0,
+      );
     }
   };
 
@@ -201,9 +243,10 @@ export default function App() {
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play()
+      audio
+        .play()
         .then(() => setIsPlaying(true))
-        .catch(err => {
+        .catch((err) => {
           if (err?.name === "AbortError") return; // benign
           setPlaybackError("Playback resume failed.");
         });
@@ -235,7 +278,9 @@ export default function App() {
 
   const handleNext = () => {
     if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(t => t.videoId === currentTrack.videoId);
+    const currentIndex = queue.findIndex(
+      (t) => t.videoId === currentTrack.videoId,
+    );
     let nextIndex = currentIndex + 1;
     if (isShuffled) {
       nextIndex = Math.floor(Math.random() * queue.length);
@@ -247,21 +292,94 @@ export default function App() {
 
   const handlePrev = () => {
     if (queue.length === 0 || !currentTrack) return;
-    const currentIndex = queue.findIndex(t => t.videoId === currentTrack.videoId);
-    let prevIndex = currentIndex - 1;
+    const currentIndex = queue.findIndex(
+      (t) => t.videoId === currentTrack.videoId,
+    );
+    let prevIndex = currentIndex === -1 ? queue.length - 1 : currentIndex - 1;
     if (prevIndex < 0) {
       prevIndex = queue.length - 1;
     }
     playTrack(queue[prevIndex]);
   };
 
-  const isFavorite = (track: Track) => favorites.some(t => t.videoId === track.videoId);
+  const addTrackToQueue = async (track: Track) => {
+    if (queue.some((item) => item.videoId === track.videoId)) return;
+
+    setQueue((prev) => [...prev, { ...track, isResolving: true }]);
+
+    try {
+      const rawJson = await invoke<string>("get_yt_stream_direct", {
+        videoId: track.videoId,
+      });
+      const streamData = JSON.parse(rawJson) as {
+        url: string;
+        duration: number;
+      };
+
+      if (streamData.duration > 0) {
+        setQueue((prev) =>
+          prev.map((item) =>
+            item.videoId === track.videoId
+              ? { ...item, duration: streamData.duration, isResolving: false }
+              : item,
+          ),
+        );
+      } else {
+        setQueue((prev) =>
+          prev.map((item) =>
+            item.videoId === track.videoId
+              ? { ...item, isResolving: false }
+              : item,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Queue metadata error:", err);
+      setQueue((prev) =>
+        prev.map((item) =>
+          item.videoId === track.videoId
+            ? { ...item, isResolving: false }
+            : item,
+        ),
+      );
+    }
+  };
+
+  const reorderQueue = (fromIndex: number, toIndex: number) => {
+    setQueue((prev) => {
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= prev.length ||
+        toIndex >= prev.length ||
+        fromIndex === toIndex
+      ) {
+        return prev;
+      }
+
+      const nextQueue = [...prev];
+      const [movedTrack] = nextQueue.splice(fromIndex, 1);
+      nextQueue.splice(toIndex, 0, movedTrack);
+      return nextQueue;
+    });
+  };
+
+  const removeFromQueue = (videoId: string) => {
+    setQueue((prev) => prev.filter((track) => track.videoId !== videoId));
+  };
+
+  const clearQueue = () => {
+    setQueue([]);
+  };
+
+  const isFavorite = (track: Track) =>
+    favorites.some((t) => t.videoId === track.videoId);
   const toggleFavorite = (track: Track) => {
     let updated;
     if (isFavorite(track)) {
-      updated = favorites.filter(t => t.videoId !== track.videoId);
+      updated = favorites.filter((t) => t.videoId !== track.videoId);
     } else {
-      updated = [...favorites, track];
+      updated = [...favorites, { ...track, addedAt: Date.now() }];
     }
     saveFavorites(updated);
   };
@@ -271,7 +389,7 @@ export default function App() {
     const newPlaylist: Playlist = {
       id: Date.now().toString(),
       name: newPlaylistName,
-      tracks: []
+      tracks: [],
     };
     savePlaylists([...playlists, newPlaylist]);
     setNewPlaylistName("");
@@ -280,15 +398,15 @@ export default function App() {
 
   const deletePlaylist = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = playlists.filter(p => p.id !== id);
+    const updated = playlists.filter((p) => p.id !== id);
     savePlaylists(updated);
     if (activeTab === id) setActiveTab("search");
   };
 
   const addTrackToPlaylist = (playlistId: string, track: Track) => {
-    const updated = playlists.map(p => {
+    const updated = playlists.map((p) => {
       if (p.id === playlistId) {
-        if (p.tracks.some(t => t.videoId === track.videoId)) return p;
+        if (p.tracks.some((t) => t.videoId === track.videoId)) return p;
         return { ...p, tracks: [...p.tracks, track] };
       }
       return p;
@@ -297,9 +415,9 @@ export default function App() {
   };
 
   const removeTrackFromPlaylist = (playlistId: string, videoId: string) => {
-    const updated = playlists.map(p => {
+    const updated = playlists.map((p) => {
       if (p.id === playlistId) {
-        return { ...p, tracks: p.tracks.filter(t => t.videoId !== videoId) };
+        return { ...p, tracks: p.tracks.filter((t) => t.videoId !== videoId) };
       }
       return p;
     });
@@ -319,10 +437,23 @@ export default function App() {
 
   const getActiveTracks = () => {
     if (activeTab === "search") return searchResults;
-    if (activeTab === "favorites") return favorites;
-    const pl = playlists.find(p => p.id === activeTab);
+    if (activeTab === "favorites") {
+      const sortedFavorites = [...favorites].sort((a, b) => {
+        if (favoriteSort === "title") {
+          return a.title.localeCompare(b.title);
+        }
+
+        const left = a.addedAt ?? 0;
+        const right = b.addedAt ?? 0;
+        return favoriteSort === "recent" ? right - left : left - right;
+      });
+      return sortedFavorites;
+    }
+    const pl = playlists.find((p) => p.id === activeTab);
     return pl ? pl.tracks : [];
   };
+
+  const hasQueue = queue.length > 0;
 
   return (
     <main className="h-screen w-screen bg-[#08090a] text-slate-100 flex flex-col font-sans relative overflow-hidden select-none">
@@ -354,83 +485,138 @@ export default function App() {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             handleSearch={handleSearch}
+            favoriteSort={favoriteSort}
+            setFavoriteSort={setFavoriteSort}
           />
 
-          <div className="p-6 flex-1 flex flex-col gap-6">
+          <div
+            className={`p-6 flex-1 grid grid-cols-1 gap-6 items-stretch ${
+              hasQueue ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1"
+            }`}
+          >
             {/* Connection mode / alert toast */}
-            {searchError && (
-              <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm flex items-center gap-3 shadow-inner">
-                <AlertCircle className="w-5 h-5 shrink-0 text-indigo-400" />
-                <span>{searchError}</span>
-              </div>
-            )}
+            <div className="lg:col-span-1 min-w-0 flex flex-col gap-6 h-full">
+              {searchError && (
+                <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm flex items-center gap-3 shadow-inner">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-indigo-400" />
+                  <span>{searchError}</span>
+                </div>
+              )}
 
-            {/* Loading Spinner */}
-            {loading ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                <div className="relative w-14 h-14">
-                  <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-                  <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
+              {/* Loading Spinner */}
+              {loading ? (
+                <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                  <div className="relative w-14 h-14 -translate-y-5">
+                    <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                    <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
+                  </div>
+                  <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
+                    Searching YouTube Music...
+                  </p>
                 </div>
-                <p className="text-slate-400 text-sm animate-pulse font-medium">Searching YouTube Music...</p>
-              </div>
-            ) : (
-              <>
-                {/* Dynamic Tracks List */}
-                <div className="space-y-1">
-                  {/* Tracks List */}
-                  {activeTab === "home" ? (
-                    <Home 
-                      playTrack={(track) => playTrack(track, [track])} 
-                      currentTrack={currentTrack} 
-                      isPlaying={isPlaying} 
-                      favorites={favorites}
-                      playlists={playlists}
-                      onOpenTab={setActiveTab}
-                    />
-                  ) : (
-                    getActiveTracks().map((track, idx) => {
-                    const isCurrent = currentTrack?.videoId === track.videoId;
-                    return (
-                      <TrackItem
-                        key={track.videoId + idx}
-                        track={track}
-                        isCurrent={isCurrent}
-                        isPlaying={isPlaying}
-                        activeDropdownTrackId={activeDropdownTrackId}
-                        setActiveDropdownTrackId={setActiveDropdownTrackId}
-                        playlists={playlists}
-                        addTrackToPlaylist={addTrackToPlaylist}
-                        toggleFavorite={toggleFavorite}
-                        isFavorite={isFavorite}
-                        activeTab={activeTab}
-                        removeTrackFromPlaylist={removeTrackFromPlaylist}
-                        playTrack={(t) => playTrack(t, getActiveTracks())}
-                        formatTime={formatTime}
-                        setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-                      />
-                    );
-                  })
-                )}
-                  {activeTab !== "home" && getActiveTracks().length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-28 gap-4 text-center">
-                      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
-                        <Music className="w-8 h-8 text-indigo-400/50" />
+              ) : (
+                <>
+                  <div className="flex-1 flex flex-col">
+                    {activeTab === "search" && !hasSearched ? (
+                      <div className="flex-1 flex items-center justify-center px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-4 max-w-sm -translate-y-5">
+                          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
+                            <Music className="w-8 h-8 text-indigo-400/50" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-slate-200">
+                              Search for music
+                            </h3>
+                            <p className="text-sm text-slate-500 max-w-xs mt-1">
+                              Type a song, artist, or album above to start
+                              browsing.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg text-slate-200">No tracks found</h3>
-                        <p className="text-sm text-slate-500 max-w-xs mt-1">
-                          {activeTab === "search" 
-                            ? "Try searching for your favorite artist, album, or song." 
-                            : activeTab === "favorites" 
-                              ? "Tap the heart icon on any song to add it to your favorites."
-                              : "This playlist is empty. Search and add tracks to populate it!"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
+                    ) : (
+                      getActiveTracks().map((track, idx) => {
+                        const isCurrent =
+                          currentTrack?.videoId === track.videoId;
+                        return (
+                          <TrackItem
+                            key={track.videoId + idx}
+                            track={track}
+                            isCurrent={isCurrent}
+                            isPlaying={isPlaying}
+                            activeDropdownTrackId={activeDropdownTrackId}
+                            setActiveDropdownTrackId={setActiveDropdownTrackId}
+                            playlists={playlists}
+                            addTrackToPlaylist={addTrackToPlaylist}
+                            addTrackToQueue={addTrackToQueue}
+                            toggleFavorite={toggleFavorite}
+                            isFavorite={isFavorite}
+                            activeTab={activeTab}
+                            removeTrackFromPlaylist={removeTrackFromPlaylist}
+                            playTrack={(t) => playTrack(t)}
+                            formatTime={formatTime}
+                            setShowCreatePlaylistModal={
+                              setShowCreatePlaylistModal
+                            }
+                          />
+                        );
+                      })
+                    )}
+                    {activeTab === "search" &&
+                      hasSearched &&
+                      getActiveTracks().length === 0 && (
+                        <div className="flex-1 flex items-center justify-center px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-4 max-w-sm -translate-y-5">
+                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
+                              <Music className="w-8 h-8 text-indigo-400/50" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg text-slate-200">
+                                No tracks found
+                              </h3>
+                              <p className="text-sm text-slate-500 max-w-xs mt-1">
+                                Try searching for your favorite artist, album,
+                                or song.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    {activeTab !== "search" &&
+                      getActiveTracks().length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-28 gap-4 text-center">
+                          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
+                            <Music className="w-8 h-8 text-indigo-400/50" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-slate-200">
+                              No tracks found
+                            </h3>
+                            <p className="text-sm text-slate-500 max-w-xs mt-1">
+                              {activeTab === "search"
+                                ? "Try searching for your favorite artist, album, or song."
+                                : activeTab === "favorites"
+                                  ? "Tap the heart icon on any song to add it to your favorites."
+                                  : "This playlist is empty. Search and add tracks to populate it!"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {hasQueue && (
+              <QueuePanel
+                queue={queue}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onPlayTrack={(track: Track) => playTrack(track)}
+                onMoveTrack={reorderQueue}
+                onRemoveTrack={removeFromQueue}
+                onClearQueue={clearQueue}
+              />
             )}
           </div>
         </section>

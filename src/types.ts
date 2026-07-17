@@ -5,6 +5,7 @@ export interface Track {
   duration: number; // in seconds
   thumbnail: string;
   isResolving?: boolean;
+  addedAt?: number;
 }
 
 export interface Playlist {

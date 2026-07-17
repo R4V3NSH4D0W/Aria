@@ -1,5 +1,5 @@
 import React from "react";
-import { Disc, Search, Heart, Plus, ListMusic, Trash2, Home } from "lucide-react";
+import { Disc, Search, Heart, Plus, ListMusic, Trash2 } from "lucide-react";
 import { Playlist } from "../types";
 
 interface SidebarProps {
@@ -27,44 +27,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="font-bold text-lg tracking-wide text-white">
               Aria
             </span>
-            <p className="text-[9px] text-slate-500 font-semibold tracking-wider uppercase">Music Player</p>
+            <p className="text-[9px] text-slate-500 font-semibold tracking-wider uppercase">
+              Music Player
+            </p>
           </div>
         </div>
 
         {/* Navigation Tabs */}
         <nav className="flex flex-col gap-1.5">
           <button
-            onClick={() => setActiveTab("home")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-semibold text-sm ${
-              activeTab === "home"
-                ? "bg-white/10 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/10"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent"
-            }`}
-          >
-            <Home className="w-4.5 h-4.5 text-blue-400" />
-            <span>Home</span>
-          </button>
-          <button
             onClick={() => setActiveTab("search")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-semibold text-sm ${
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border ${
               activeTab === "search"
-                ? "bg-white/10 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/10"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent"
+                ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
             }`}
           >
-            <Search className="w-4.5 h-4.5 text-indigo-400" />
-            <span>Search music</span>
+            <Search className="w-4 h-4 text-indigo-300" />
+            <span>Search</span>
           </button>
 
           <button
             onClick={() => setActiveTab("favorites")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-semibold text-sm ${
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border ${
               activeTab === "favorites"
-                ? "bg-white/10 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/10"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent"
+                ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
             }`}
           >
-            <Heart className="w-4.5 h-4.5 text-pink-400 fill-pink-400/20" />
+            <Heart className="w-4 h-4 text-pink-300 fill-pink-300/15" />
             <span>Favorites</span>
           </button>
         </nav>
@@ -73,10 +64,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Playlists Header */}
         <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Playlists</span>
+          <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+            Playlists
+          </span>
           <button
             onClick={() => setShowCreatePlaylistModal(true)}
-            className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/5 border border-transparent transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -100,14 +93,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <button
                 onClick={(e) => deletePlaylist(pl.id, e)}
-                className="opacity-0 group-hover:opacity-100 hover:text-red-400 p-1 rounded-md hover:bg-white/5 transition-all cursor-pointer"
+                className="opacity-0 group-hover:opacity-100 hover:text-red-300 p-1 rounded-md hover:bg-white/5 transition-all cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </button>
           ))}
           {playlists.length === 0 && (
-            <p className="text-xs text-slate-600 italic px-4 py-2">No playlists created.</p>
+            <p className="text-xs text-slate-600 italic px-4 py-2">
+              No playlists created.
+            </p>
           )}
         </div>
       </div>
