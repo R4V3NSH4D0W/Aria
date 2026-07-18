@@ -227,14 +227,6 @@ export function useLibrary() {
   }, [activeTab]);
 
   const downloadTrack = useCallback(async (track: Track) => {
-    // Only allow downloading if the track is in Favorites or custom local playlists
-    const isInFavs = favorites.some((t) => t.videoId === track.videoId);
-    const isInLocalPlaylists = playlists.some((p) => p.tracks.some((t) => t.videoId === track.videoId));
-    if (!isInFavs && !isInLocalPlaylists) {
-      console.warn("Download blocked: Track must be in Favorites or an internal playlist.");
-      return;
-    }
-
     if (downloadingTrackIds.has(track.videoId)) return;
     
     setDownloadingTrackIds((prev) => {
