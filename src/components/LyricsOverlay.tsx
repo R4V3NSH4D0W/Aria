@@ -2,15 +2,9 @@ import React, { useEffect, useState, useMemo } from "react";
 import { X, Loader2, FileText } from "lucide-react";
 import { Track } from "../types";
 
-interface Word {
-  text: string;
-  time: number;
-}
-
 interface SyncedLine {
   time: number;
   text: string;
-  words?: Word[];
 }
 
 interface LyricsOverlayProps {
@@ -51,38 +45,12 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
         const milliseconds = parseInt(msStr.padEnd(3, "0").slice(0, 3), 10);
 
         const time = minutes * 60 + seconds + milliseconds / 1000;
-        const text = match[4].trim();
+        let text = match[4].trim();
 
-        // Parse Enhanced LRC word timestamps like <00:12.30> word
-        const wordRegex = /<(\d+):(\d+)(?:\.(\d+))?>([^<]*)/g;
-        const words: Word[] = [];
-        let wordMatch;
-        let cleanText = "";
+        // Strip eLRC word timestamps (e.g. <00:12.30>) to keep plain text
+        text = text.replace(/<\d+:\d+(?:\.\d+)?>/g, "");
 
-        while ((wordMatch = wordRegex.exec(text)) !== null) {
-          const wMin = parseInt(wordMatch[1], 10);
-          const wSec = parseInt(wordMatch[2], 10);
-          const wMsStr = wordMatch[3] || "0";
-          const wMs = parseInt(wMsStr.padEnd(3, "0").slice(0, 3), 10);
-          const wTime = wMin * 60 + wSec + wMs / 1000;
-          const wText = wordMatch[4].trim();
-
-          if (wText) {
-            words.push({ text: wText, time: wTime });
-            cleanText += (cleanText ? " " : "") + wText;
-          }
-        }
-
-        // If no word tags are found, use the plain text
-        if (words.length === 0) {
-          cleanText = text;
-        }
-
-        parsedLines.push({
-          time,
-          text: cleanText,
-          words: words.length > 0 ? words : undefined,
-        });
+        parsedLines.push({ time, text: text.trim() });
       } else {
         const text = line.trim();
         if (text) {
@@ -206,131 +174,37 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
           </div>
         ) : lyrics ? (
           parsedLyrics.type === "synced" ? (
-            <div className="max-w-7xl w-full flex flex-col gap-8 py-24 px-4 select-text">
+            <div className="max-w-7xl w-full flex flex-col gap-8 py-24 px-4 select-text text-center">
               {parsedLyrics.lines.map((line, idx) => {
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
-                  if (line.words) {
-                    // 1. Fluid Syllable Water-Flow Highlighting (eLRC)
-                    return (
-                      <p
-                        key={idx}
-                        id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
-                      >
-                        {line.words.map((word, wIdx) => {
-                          const nextWord = line.words![wIdx + 1];
-                          const wordEndTime = nextWord ? nextWord.time : (parsedLyrics.lines[idx + 1]?.time ?? (audioRef.current?.duration || word.time + 3));
-                          const wordDuration = Math.max(wordEndTime - word.time, 0.1);
-                          
-                          const isWordActive = adjustedProgress >= word.time && adjustedProgress < wordEndTime;
-                          const isWordPast = adjustedProgress >= wordEndTime;
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - word.time) / wordDuration));
-                          const fillPercent = wordProgress * 100;
+                  const lineStart = line.time;
+                  const nextLine = parsedLyrics.lines[idx + 1];
+                  const lineEnd = nextLine?.time ?? (audioRef.current?.duration || line.time + 6);
+                  const lineDuration = Math.max(lineEnd - lineStart, 0.5);
+                  const lineProgress = Math.max(0, Math.min(1, (adjustedProgress - lineStart) / lineDuration));
+                  const fillPercent = lineProgress * 100;
 
-                          let wordStyle: React.CSSProperties = {};
-                          let wordClass = "";
-
-                          if (isWordActive) {
-                            wordStyle = {
-                              background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              display: "inline-block",
-                            };
-                            wordClass = "scale-[1.03] transition-all duration-150 drop-shadow-[0_0_15px_rgba(99,102,241,0.85)] font-black text-[#818cf8]";
-                          } else if (isWordPast) {
-                            wordStyle = {
-                              background: "#ffffff",
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              display: "inline-block",
-                            };
-                            wordClass = "transition-all duration-300 opacity-95 text-white font-extrabold";
-                          } else {
-                            wordStyle = {
-                              background: "rgba(255,255,255,0.25)",
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              display: "inline-block",
-                            };
-                            wordClass = "transition-all duration-300 font-extrabold";
-                          }
-
-                          return (
-                            <span key={wIdx} style={wordStyle} className={wordClass}>
-                              {word.text}
-                            </span>
-                          );
-                        })}
-                      </p>
-                    );
-                  } else {
-                    // 2. Fluid Word Water-Flow Highlighting Fallback (LRC)
-                    const words = line.text.split(/\s+/);
-                    const nextLine = parsedLyrics.lines[idx + 1];
-                    const lineDuration = Math.max((nextLine?.time ?? (audioRef.current?.duration || line.time + 5)) - line.time, 0.5);
-                    const wordDuration = lineDuration / Math.max(words.length, 1);
-
-                    return (
-                      <p
-                        key={idx}
-                        id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
-                      >
-                        {words.map((word, wIdx) => {
-                          const wordStartTime = line.time + wIdx * wordDuration;
-                          const wordEndTime = wordStartTime + wordDuration;
-                          
-                          const isWordActive = adjustedProgress >= wordStartTime && adjustedProgress < wordEndTime;
-                          const isWordPast = adjustedProgress >= wordEndTime;
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / wordDuration));
-                          const fillPercent = wordProgress * 100;
-
-                          let wordStyle: React.CSSProperties = {};
-                          let wordClass = "";
-
-                          if (isWordActive) {
-                            wordStyle = {
-                              background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              display: "inline-block",
-                            };
-                            wordClass = "scale-[1.03] transition-all duration-150 drop-shadow-[0_0_15px_rgba(99,102,241,0.85)] font-black text-[#818cf8]";
-                          } else if (isWordPast) {
-                            wordStyle = {
-                              background: "#ffffff",
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              display: "inline-block",
-                            };
-                            wordClass = "transition-all duration-300 opacity-95 text-white font-extrabold";
-                          } else {
-                            wordStyle = {
-                              background: "rgba(255,255,255,0.25)",
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              display: "inline-block",
-                            };
-                            wordClass = "transition-all duration-300 font-extrabold";
-                          }
-
-                          return (
-                            <span key={wIdx} style={wordStyle} className={wordClass}>
-                              {word}
-                            </span>
-                          );
-                        })}
-                      </p>
-                    );
-                  }
+                  return (
+                    <p
+                      key={idx}
+                      id={`lyric-line-${idx}`}
+                      className="inline-block text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center opacity-100 leading-normal"
+                      style={{
+                        background: `linear-gradient(to right, #c084fc ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                      }}
+                    >
+                      {line.text}
+                    </p>
+                  );
                 } else {
                   return (
                     <p
                       key={idx}
                       id={`lyric-line-${idx}`}
-                      className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-300 origin-center leading-normal"
+                      className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-300 origin-center leading-normal"
                     >
                       {line.text}
                     </p>
