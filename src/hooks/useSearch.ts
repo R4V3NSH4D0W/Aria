@@ -6,38 +6,6 @@ interface UseSearchProps {
   setActiveTab: (tab: string) => void;
 }
 
-function parseYoutubeUrl(url: string): { videoId?: string; playlistId?: string } | null {
-  try {
-    const cleanUrl = url.trim();
-    if (!cleanUrl.includes("youtube.com") && !cleanUrl.includes("youtu.be")) {
-      return null;
-    }
-
-    let videoId: string | undefined;
-    let playlistId: string | undefined;
-
-    if (cleanUrl.includes("youtube.com")) {
-      const urlObj = new URL(cleanUrl);
-      videoId = urlObj.searchParams.get("v") || undefined;
-      playlistId = urlObj.searchParams.get("list") || undefined;
-    } else if (cleanUrl.includes("youtu.be")) {
-      const urlObj = new URL(cleanUrl);
-      const pathParts = urlObj.pathname.split("/").filter(Boolean);
-      if (pathParts.length > 0) {
-        videoId = pathParts[0];
-      }
-      playlistId = urlObj.searchParams.get("list") || undefined;
-    }
-
-    if (videoId || playlistId) {
-      return { videoId, playlistId };
-    }
-  } catch (err) {
-    console.error("Failed to parse YouTube URL:", err);
-  }
-  return null;
-}
-
 export function useSearch({ setActiveTab }: UseSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,17 +39,6 @@ export function useSearch({ setActiveTab }: UseSearchProps) {
       if (e) e.preventDefault();
       const query = searchQuery.trim();
       if (!query) return;
-
-      const parsed = parseYoutubeUrl(query);
-      if (parsed) {
-        setSearchQuery("");
-        if (parsed.playlistId) {
-          setActiveTab(`yt:${parsed.playlistId}`);
-        } else if (parsed.videoId) {
-          setActiveTab(`yt:RD${parsed.videoId}`);
-        }
-        return;
-      }
 
       setLoading(true);
       setSearchError("");

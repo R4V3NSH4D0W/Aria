@@ -1,5 +1,5 @@
-import React from "react";
-import { Radio, Play, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Radio, Play, Trash2, PlusCircle } from "lucide-react";
 import { SavedRadio } from "../types";
 
 interface YtRadiosViewProps {
@@ -8,21 +8,101 @@ interface YtRadiosViewProps {
   onDeleteRadio: (radioId: string, e: React.MouseEvent) => void;
 }
 
+function parseYoutubeUrl(url: string): { videoId?: string; playlistId?: string } | null {
+  try {
+    const cleanUrl = url.trim();
+    if (!cleanUrl.includes("youtube.com") && !cleanUrl.includes("youtu.be")) {
+      return null;
+    }
+
+    let videoId: string | undefined;
+    let playlistId: string | undefined;
+
+    if (cleanUrl.includes("youtube.com")) {
+      const urlObj = new URL(cleanUrl);
+      videoId = urlObj.searchParams.get("v") || undefined;
+      playlistId = urlObj.searchParams.get("list") || undefined;
+    } else if (cleanUrl.includes("youtu.be")) {
+      const urlObj = new URL(cleanUrl);
+      const pathParts = urlObj.pathname.split("/").filter(Boolean);
+      if (pathParts.length > 0) {
+        videoId = pathParts[0];
+      }
+      playlistId = urlObj.searchParams.get("list") || undefined;
+    }
+
+    if (videoId || playlistId) {
+      return { videoId, playlistId };
+    }
+  } catch (err) {
+    console.error("Failed to parse YouTube URL:", err);
+  }
+  return null;
+}
+
 export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
   savedRadios,
   onSelectRadio,
   onDeleteRadio,
 }) => {
+  const [urlInput, setUrlInput] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleAddRadio = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUrl = urlInput.trim();
+    if (!cleanUrl) return;
+
+    const parsed = parseYoutubeUrl(cleanUrl);
+    if (parsed) {
+      setErrorMsg("");
+      setUrlInput("");
+      if (parsed.playlistId) {
+        onSelectRadio(parsed.playlistId);
+      } else if (parsed.videoId) {
+        onSelectRadio(`RD${parsed.videoId}`);
+      }
+    } else {
+      setErrorMsg("Invalid YouTube link. Please paste a valid track or mix URL.");
+    }
+  };
+
   return (
     <div className="flex-1 p-6 lg:p-8 pb-36 lg:pb-36 overflow-y-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
-          YouTube Radios
-        </h1>
-        <p className="text-sm text-slate-400">
-          Your saved YouTube Music mixes and dynamic radios. Paste a video or mix link to add more.
-        </p>
+      {/* Header & Link Input */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pb-6 border-b border-white/5">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
+            YouTube Radios
+          </h1>
+          <p className="text-sm text-slate-400">
+            Paste a track or mix link to load dynamic, infinite queues.
+          </p>
+        </div>
+
+        <form onSubmit={handleAddRadio} className="w-full md:max-w-md flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="Paste YouTube Music URL..."
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.05] focus:bg-white/[0.07] border border-white/10 focus:border-violet-500/50 text-slate-200 text-sm focus:outline-none transition-all duration-300 placeholder:text-slate-500 shadow-inner"
+            />
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 hover:border-white/20 font-bold text-sm transition-all duration-300 cursor-pointer hover:-translate-y-0.5 flex items-center gap-2 shrink-0"
+            >
+              <PlusCircle className="w-4 h-4 text-violet-400" />
+              <span>Load</span>
+            </button>
+          </div>
+          {errorMsg && (
+            <p className="text-xs text-red-400 font-medium px-1 animate-pulse">
+              {errorMsg}
+            </p>
+          )}
+        </form>
       </div>
 
       {savedRadios.length === 0 ? (
@@ -30,7 +110,7 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
           <Radio className="w-12 h-12 text-violet-400/40 mb-4 animate-pulse" />
           <h3 className="text-lg font-semibold text-slate-200 mb-1">No saved radios</h3>
           <p className="text-sm text-slate-400 max-w-sm">
-            Paste a YouTube video link or dynamic mix link in the search bar to automatically generate and save a radio station.
+            Paste a YouTube video link or mix link in the input box above to load and automatically save your radio mix.
           </p>
         </div>
       ) : (
