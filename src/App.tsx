@@ -565,22 +565,49 @@ export default function App() {
               </div>
             ) : lyrics ? (
               parsedLyrics.type === "synced" ? (
-                <div className="max-w-3xl w-full flex flex-col gap-6 py-24 px-4 select-text">
+                <div className="max-w-3xl w-full flex flex-col gap-8 py-24 px-4 select-text">
                   {parsedLyrics.lines.map((line, idx) => {
                     const isActive = idx === activeLyricIndex;
-                    return (
-                      <p
-                        key={idx}
-                        id={`lyric-line-${idx}`}
-                        className={`text-center transition-all duration-500 cursor-pointer origin-center ${
-                          isActive
-                            ? "text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white scale-[1.03] drop-shadow-[0_0_15px_rgba(255,255,255,0.45)] opacity-100"
-                            : "text-lg sm:text-xl lg:text-2xl font-bold text-slate-500 opacity-40 hover:opacity-75 hover:scale-[1.01]"
-                        }`}
-                      >
-                        {line.text}
-                      </p>
-                    );
+                    if (isActive) {
+                      const words = line.text.split(/\s+/);
+                      const lineDuration = Math.max((parsedLyrics.lines[idx + 1]?.time ?? duration) - line.time, 0.5);
+                      const wordDuration = lineDuration / Math.max(words.length, 1);
+                      const activeWordIdx = Math.floor((progress - line.time) / wordDuration);
+
+                      return (
+                        <p
+                          key={idx}
+                          id={`lyric-line-${idx}`}
+                          className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold scale-[1.03] transition-all duration-350 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                        >
+                          {words.map((word, wIdx) => {
+                            const isWordActive = wIdx === activeWordIdx;
+                            return (
+                              <span
+                                key={wIdx}
+                                className={`transition-all duration-350 ${
+                                  isWordActive
+                                    ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
+                                    : "text-white/45"
+                                }`}
+                              >
+                                {word}
+                              </span>
+                            );
+                          })}
+                        </p>
+                      );
+                    } else {
+                      return (
+                        <p
+                          key={idx}
+                          id={`lyric-line-${idx}`}
+                          className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-500 origin-center"
+                        >
+                          {line.text}
+                        </p>
+                      );
+                    }
                   })}
                 </div>
               ) : (
