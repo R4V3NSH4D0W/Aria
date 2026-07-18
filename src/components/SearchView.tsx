@@ -116,7 +116,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col pb-36">
       {searchResults.map((item, idx) => {
         if ("type" in item && item.type === "artist") {
           return (

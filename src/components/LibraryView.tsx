@@ -96,7 +96,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col pb-36">
       <div className="flex items-center gap-3 mb-6 px-1 shrink-0">
         {onBack && (
           <button
