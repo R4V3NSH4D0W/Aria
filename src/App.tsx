@@ -196,19 +196,18 @@ export default function App() {
       />
 
       <div className="flex flex-1 overflow-hidden z-10">
-        {isSidebarOpen && (
-          <Sidebar
-            activeTab={activeTab}
-            setActiveTab={handleTabChange}
-            playlists={playlists}
-            deletePlaylist={(id, e) => {
-              deletePlaylist(id, e);
-              setSelectedArtist(null);
-            }}
-            setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-            hasPlayer={!!currentTrack}
-          />
-        )}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={handleTabChange}
+          playlists={playlists}
+          deletePlaylist={(id, e) => {
+            deletePlaylist(id, e);
+            setSelectedArtist(null);
+          }}
+          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+          hasPlayer={!!currentTrack}
+          isOpen={isSidebarOpen}
+        />
 
         {/* Main Content Area */}
         <section
