@@ -1,4 +1,4 @@
-import { AlertCircle, WifiOff } from "lucide-react";
+import { AlertCircle, WifiOff, FileText, X, Loader2 } from "lucide-react";
 import { Track } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -55,6 +55,8 @@ export default function App() {
     removeTrackFromPlaylist,
     addToRecentlyPlayed,
   } = useLibrary();
+
+  const [showLyricsMode, setShowLyricsMode] = useState(false);
 
   // Automatically minimize sidebar on small viewports, maximize on desktops
   useEffect(() => {
@@ -178,6 +180,8 @@ export default function App() {
     isShuffled,
     playbackError,
     resolvedAudioUrl,
+    lyrics,
+    lyricsLoading,
     audioRef,
     setIsShuffled,
     setIsLooping,
@@ -415,7 +419,7 @@ export default function App() {
               )}
             </div>
 
-            {hasQueue && (
+            {(hasQueue) && (
               <QueuePanel
                 queue={queue}
                 currentTrack={currentTrack}
@@ -455,7 +459,67 @@ export default function App() {
           playlists={playlists}
           addTrackToPlaylist={addTrackToPlaylist}
           setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+          showLyricsMode={showLyricsMode}
+          setShowLyricsMode={setShowLyricsMode}
         />
+      )}
+
+      {/* Full-screen Immersive Lyrics Mode Overlay */}
+      {showLyricsMode && currentTrack && (
+        <div className="fixed inset-x-0 top-0 bottom-24 z-40 bg-[#07080a]/80 backdrop-blur-3xl flex flex-col animate-fade-in">
+          {/* Header */}
+          <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 shrink-0">
+            <div className="flex items-center gap-4">
+              <img
+                src={currentTrack.thumbnail}
+                alt={currentTrack.title}
+                className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-lg"
+              />
+              <div>
+                <h2 className="text-base font-bold text-white leading-tight truncate max-w-md">
+                  {currentTrack.title}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5 truncate max-w-md">
+                  {currentTrack.uploaderName}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowLyricsMode(false)}
+              className="p-2.5 rounded-full bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Lyrics Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-12 flex flex-col items-center justify-start min-h-0 scrollbar-thin select-text">
+            {lyricsLoading ? (
+              <div className="my-auto flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                <p className="text-sm text-slate-500 font-medium animate-pulse">
+                  Fetching lyrics...
+                </p>
+              </div>
+            ) : lyrics ? (
+              <div className="max-w-2xl text-center font-bold text-xl sm:text-2xl lg:text-3xl text-slate-200 leading-relaxed whitespace-pre-wrap tracking-tight py-4 drop-shadow-md select-text hover:text-white transition-colors">
+                {lyrics}
+              </div>
+            ) : (
+              <div className="my-auto text-center">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-6 h-6 text-indigo-400/40" />
+                </div>
+                <p className="text-base text-slate-400 font-semibold">
+                  No lyrics found
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Lyrics aren't available for this track right now.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Create Playlist Modal */}

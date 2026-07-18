@@ -1274,6 +1274,100 @@ async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String>
     Ok(tracks)
 }
 
+#[tauri::command]
+async fn get_yt_lyrics(video_id: String) -> Result<Option<String>, String> {
+    println!("get_yt_lyrics for video_id: {}", video_id);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let next_payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "videoId": video_id
+    });
+
+    let mut next_req = client.post("https://music.youtube.com/youtubei/v1/next")
+        .json(&next_payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json");
+
+    if let Some(cookie) = get_cookie_header() {
+        next_req = next_req.header("Cookie", cookie);
+    }
+
+    let next_res = next_req.send().await
+        .map_err(|e| format!("Next request failed: {}", e))?;
+
+    let next_data: Value = next_res.json().await
+        .map_err(|e| format!("Failed to parse next response: {}", e))?;
+
+    let tabs = next_data.pointer("/contents/singleColumnMusicResultsRenderer/pivotTabRenderer/tabs");
+    let mut lyrics_browse_id = None;
+
+    if let Some(tabs_array) = tabs.and_then(|t| t.as_array()) {
+        for tab in tabs_array {
+            if let Some(title) = tab.pointer("/tabRenderer/title/runs/0/text").and_then(|t| t.as_str()) {
+                if title == "Lyrics" {
+                    lyrics_browse_id = tab.pointer("/tabRenderer/endpoint/browseEndpoint/browseId")
+                        .and_then(|id| id.as_str())
+                        .map(|s| s.to_string());
+                    break;
+                }
+            }
+        }
+    }
+
+    let browse_id = match lyrics_browse_id {
+        Some(id) => id,
+        None => {
+            println!("get_yt_lyrics: no lyrics browseId found in /next response");
+            return Ok(None);
+        }
+    };
+
+    let browse_payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "browseId": browse_id
+    });
+
+    let mut browse_req = client.post("https://music.youtube.com/youtubei/v1/browse")
+        .json(&browse_payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json");
+
+    if let Some(cookie) = get_cookie_header() {
+        browse_req = browse_req.header("Cookie", cookie);
+    }
+
+    let browse_res = browse_req.send().await
+        .map_err(|e| format!("Browse lyrics request failed: {}", e))?;
+
+    let browse_data: Value = browse_res.json().await
+        .map_err(|e| format!("Failed to parse browse lyrics response: {}", e))?;
+
+    let lyrics_text = browse_data.pointer("/sectionListRenderer/contents/0/musicDescriptionShelfRenderer/description/runs/0/text")
+        .or_else(|| browse_data.pointer("/contents/sectionListRenderer/contents/0/musicDescriptionShelfRenderer/description/runs/0/text"))
+        .and_then(|t| t.as_str())
+        .map(|s| s.to_string());
+
+    Ok(lyrics_text)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1288,7 +1382,8 @@ pub fn run() {
             get_yt_stream_direct,
             get_yt_artist,
             get_yt_user_playlists,
-            get_yt_playlist_tracks
+            get_yt_playlist_tracks,
+            get_yt_lyrics
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

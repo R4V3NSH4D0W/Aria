@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2, Plus } from "lucide-react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2, Plus, FileText } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -26,6 +26,8 @@ interface PlayerProps {
   playlists: Playlist[];
   addTrackToPlaylist: (playlistId: string, track: Track) => void;
   setShowCreatePlaylistModal: (show: boolean) => void;
+  showLyricsMode: boolean;
+  setShowLyricsMode: (show: boolean) => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -51,6 +53,8 @@ export const Player: React.FC<PlayerProps> = ({
   playlists,
   addTrackToPlaylist,
   setShowCreatePlaylistModal,
+  showLyricsMode,
+  setShowLyricsMode,
 }) => {
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
   const playlistMenuRef = useRef<HTMLDivElement | null>(null);
@@ -225,6 +229,15 @@ export const Player: React.FC<PlayerProps> = ({
 
       {/* Right: Volume & Extra Controls */}
       <div className="flex items-center gap-2 lg:gap-3 w-1/3 min-w-[80px] max-w-[200px] justify-end shrink-0">
+        <button
+          onClick={() => setShowLyricsMode(!showLyricsMode)}
+          className={`p-2 transition-all cursor-pointer ${
+            showLyricsMode ? "text-indigo-400" : "text-slate-400 hover:text-white"
+          }`}
+          title="Lyrics mode"
+        >
+          <FileText className="w-4.5 h-4.5 lg:w-5 h-5" />
+        </button>
         <button
           onClick={toggleMute}
           className="p-2 text-slate-400 hover:text-white transition-all cursor-pointer"

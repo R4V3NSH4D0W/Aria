@@ -25,6 +25,8 @@ export function usePlayback({
   const [isShuffled, setIsShuffled] = useState(false);
   const [playbackError, setPlaybackError] = useState("");
   const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string | null>(null);
+  const [lyrics, setLyrics] = useState<string | null>(null);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
 
   // Audio & Playback Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -70,10 +72,24 @@ export function usePlayback({
         if (streamData.url) {
           setResolvedAudioUrl(streamData.url);
           setCurrentTrack({ ...track, isResolving: false });
-          // Use YouTube's authoritative duration (from approxDurationMs)
           if (streamData.duration > 0) {
             setDuration(streamData.duration);
           }
+
+          // Fetch lyrics asynchronously
+          setLyrics(null);
+          setLyricsLoading(true);
+          invoke<string | null>("get_yt_lyrics", { videoId: track.videoId })
+            .then((lyricText) => {
+              setLyrics(lyricText);
+            })
+            .catch((e) => {
+              console.error("Failed to load lyrics:", e);
+              setLyrics(null);
+            })
+            .finally(() => {
+              setLyricsLoading(false);
+            });
         } else {
           throw new Error("No stream URL");
         }
@@ -372,6 +388,8 @@ export function usePlayback({
     isShuffled,
     playbackError,
     resolvedAudioUrl,
+    lyrics,
+    lyricsLoading,
     audioRef,
     setPlaybackError,
     setIsShuffled,
