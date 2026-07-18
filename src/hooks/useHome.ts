@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HomeSection } from "../types";
 
@@ -7,9 +7,12 @@ export function useHome() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const loadingRef = useRef(false);
 
   const fetchHome = useCallback(async (force = false) => {
+    if (loadingRef.current) return;
     if (hasLoaded && !force) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -39,6 +42,7 @@ export function useHome() {
         setError(null);
       }
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [hasLoaded]);

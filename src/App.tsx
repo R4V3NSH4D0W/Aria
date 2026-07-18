@@ -139,12 +139,12 @@ export default function App() {
     }
   }, [activeTab, loadPlaylist]);
 
-  // Trigger home feed reload when network reconnects
+  // Trigger home feed reload when network reconnects (only if currently on home tab)
   useEffect(() => {
-    if (isOnline) {
+    if (isOnline && activeTab === "home") {
       fetchHome(true);
     }
-  }, [isOnline, fetchHome]);
+  }, [isOnline, activeTab, fetchHome]);
 
   const handleTabChange = (tab: string) => {
     baseHandleTabChange(tab);
