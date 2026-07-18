@@ -48,7 +48,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   downloadTrack,
   deleteDownload,
 }) => {
-  const isLocalContext = activeTab === "favorites" || (activeTab !== "recently-played" && !activeTab.startsWith("yt:"));
+  const isLocalContext = activeTab === "favorites" || activeTab.startsWith("yt:RD") || (activeTab !== "recently-played" && !activeTab.startsWith("yt:"));
 
   const downloadAll = async () => {
     if (!downloadTrack) return;

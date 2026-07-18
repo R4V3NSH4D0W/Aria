@@ -53,5 +53,7 @@ export interface SavedRadio {
   videoId: string; // Seed videoId
   title: string;
   thumbnail: string;
+  thumbnails?: string[]; // First 4 track thumbnails for cover collage
+  tracks?: Track[];      // Cached tracks for offline playback
   addedAt: number;
 }

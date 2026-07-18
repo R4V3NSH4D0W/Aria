@@ -102,7 +102,7 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
             />
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all duration-300 shadow-lg shadow-indigo-600/25 cursor-pointer hover:-translate-y-0.5 flex items-center gap-2 shrink-0"
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all duration-300 cursor-pointer hover:-translate-y-0.5 flex items-center gap-2 shrink-0"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Load</span>
@@ -134,7 +134,19 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
             >
               {/* Thumbnail Container */}
               <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-4 bg-slate-900 shadow-inner">
-                {radio.thumbnail ? (
+                {radio.thumbnails && radio.thumbnails.length >= 4 ? (
+                  <div className="w-full h-full grid grid-cols-2 grid-rows-2 transition-transform duration-500 group-hover:scale-105">
+                    {radio.thumbnails.map((imgUrl, i) => (
+                      <img
+                        key={i}
+                        src={imgUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                ) : radio.thumbnail ? (
                   <img
                     src={radio.thumbnail}
                     alt={radio.title}

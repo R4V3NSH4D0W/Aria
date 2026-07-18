@@ -164,20 +164,39 @@ export default function App() {
     }
   }, [activeTab, loadPlaylist]);
 
-  // Auto-save YouTube Radio mixes to our Saved Radios list
+  // Auto-save & update YouTube Radio mixes to our Saved Radios list
   useEffect(() => {
     if (activeTab.startsWith("yt:RD") && ytPlaylistTracks.length > 0) {
       const radioId = activeTab.slice(3);
-      if (!savedRadios.some((r) => r.id === radioId)) {
-        const firstTrack = ytPlaylistTracks[0];
+      const existingIndex = savedRadios.findIndex((r) => r.id === radioId);
+      const firstTrack = ytPlaylistTracks[0];
+      const collageThumbnails = ytPlaylistTracks.slice(0, 4).map((t) => t.thumbnail);
+
+      if (existingIndex === -1) {
         const newRadio: SavedRadio = {
           id: radioId,
           videoId: radioId.slice(2),
           title: `${firstTrack.title} Radio`,
           thumbnail: firstTrack.thumbnail,
+          thumbnails: collageThumbnails,
+          tracks: ytPlaylistTracks,
           addedAt: Date.now(),
         };
         setSavedRadios((prev) => [newRadio, ...prev]);
+      } else {
+        const existingRadio = savedRadios[existingIndex];
+        // Only update if data has changed to prevent infinite rendering loops
+        const tracksChanged = !existingRadio.tracks || existingRadio.tracks.length !== ytPlaylistTracks.length;
+        const thumbsChanged = !existingRadio.thumbnails || existingRadio.thumbnails.length !== collageThumbnails.length;
+        if (tracksChanged || thumbsChanged) {
+          setSavedRadios((prev) =>
+            prev.map((r) =>
+              r.id === radioId
+                ? { ...r, thumbnails: collageThumbnails, tracks: ytPlaylistTracks }
+                : r
+            )
+          );
+        }
       }
     }
   }, [activeTab, ytPlaylistTracks, savedRadios]);
@@ -211,6 +230,13 @@ export default function App() {
       return sortedFavorites;
     }
     if (activeTab.startsWith("yt:")) {
+      if (activeTab.startsWith("yt:RD") && !isOnline) {
+        const radioId = activeTab.slice(3);
+        const saved = savedRadios.find((r) => r.id === radioId);
+        if (saved?.tracks) {
+          return saved.tracks;
+        }
+      }
       return ytPlaylistTracks;
     }
     const pl = playlists.find((p) => p.id === activeTab);
