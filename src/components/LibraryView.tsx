@@ -55,8 +55,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     const tracksToDownload = tracks.filter(
       (track) => !downloads?.some((d) => d.videoId === track.videoId) && !track.localPath
     );
-    for (const track of tracksToDownload) {
-      await downloadTrack(track);
+
+    // Limit concurrency to 3 parallel downloads to prevent YouTube IP rate-limiting
+    const limit = 3;
+    for (let i = 0; i < tracksToDownload.length; i += limit) {
+      const chunk = tracksToDownload.slice(i, i + limit);
+      await Promise.all(chunk.map((track) => downloadTrack(track)));
     }
   };
 
