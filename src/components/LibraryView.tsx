@@ -1,5 +1,5 @@
 import React from "react";
-import { Music, Play, Shuffle } from "lucide-react";
+import { Music, Play, Shuffle, ArrowLeft } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { TrackItem } from "./TrackItem";
 
@@ -19,6 +19,7 @@ interface LibraryViewProps {
   isFavorite: (track: Track) => boolean;
   removeTrackFromPlaylist: (playlistId: string, videoId: string) => void;
   setShowCreatePlaylistModal: (show: boolean) => void;
+  onBack?: () => void;
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -37,6 +38,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   isFavorite,
   removeTrackFromPlaylist,
   setShowCreatePlaylistModal,
+  onBack,
 }) => {
   if (tracks.length === 0) {
     return (
@@ -60,7 +62,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="flex items-center gap-4 mb-6 px-1 shrink-0">
+      <div className="flex items-center gap-3 mb-6 px-1 shrink-0">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
+            title="Back to Playlists"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <button
           onClick={() => playSongs(tracks, false)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all duration-300 shadow-lg shadow-indigo-600/25 cursor-pointer hover:-translate-y-0.5"

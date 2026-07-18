@@ -14,7 +14,6 @@ interface HeaderProps {
   toggleSidebar: () => void;
   onOpenSettings: () => void;
   ytPlaylists: { id: string; title: string }[];
-  setActiveTab: (tab: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,7 +28,6 @@ export const Header: React.FC<HeaderProps> = ({
   toggleSidebar,
   onOpenSettings,
   ytPlaylists,
-  setActiveTab,
 }) => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
@@ -104,13 +102,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </>
               ) : activeTab.startsWith("yt:") ? (
                 <>
-                  <button
-                    onClick={() => setActiveTab("yt-playlists")}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 border border-transparent transition-all cursor-pointer mr-1"
-                    title="Back to Playlists"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
                   <ListMusic className="w-7 h-7 text-violet-400" />
                   <span>{ytPlaylists.find((p) => p.id === activeTab.slice(3))?.title || "YouTube Playlist"}</span>
                 </>

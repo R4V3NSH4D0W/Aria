@@ -226,7 +226,6 @@ export default function App() {
             toggleSidebar={() => setIsSidebarOpen((open) => !open)}
             onOpenSettings={() => setActiveTab("settings")}
             ytPlaylists={ytPlaylists}
-            setActiveTab={setActiveTab}
           />
 
           <div
@@ -345,6 +344,7 @@ export default function App() {
                       isFavorite={isFavorite}
                       removeTrackFromPlaylist={removeTrackFromPlaylist}
                       setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                      onBack={activeTab.startsWith("yt:") ? () => setActiveTab("yt-playlists") : undefined}
                     />
                   )}
                 </>
