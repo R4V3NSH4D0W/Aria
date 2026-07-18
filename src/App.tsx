@@ -139,6 +139,13 @@ export default function App() {
     }
   }, [activeTab, loadPlaylist]);
 
+  // Trigger home feed reload when network reconnects
+  useEffect(() => {
+    if (isOnline) {
+      fetchHome(true);
+    }
+  }, [isOnline, fetchHome]);
+
   const handleTabChange = (tab: string) => {
     baseHandleTabChange(tab);
     setSelectedArtist(null);
