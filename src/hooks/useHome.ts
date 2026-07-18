@@ -33,7 +33,11 @@ export function useHome() {
       setHasLoaded(true);
     } catch (err) {
       console.error("Failed to load home:", err);
-      setError(String(err));
+      if (navigator.onLine) {
+        setError("Unable to load home feed. Please check your internet connection.");
+      } else {
+        setError(null);
+      }
     } finally {
       setLoading(false);
     }

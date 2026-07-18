@@ -11,7 +11,7 @@ export function useLibrary() {
     const saved = localStorage.getItem("aria_recently_played");
     return saved ? JSON.parse(saved) : [];
   });
-  const [activeTab, setActiveTab] = useState<string>("home");
+  const [activeTab, setActiveTab] = useState<string>(() => navigator.onLine ? "home" : "favorites");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [pendingTrackForPlaylist, setPendingTrackForPlaylist] = useState<Track | null>(null);
