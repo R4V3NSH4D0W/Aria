@@ -127,7 +127,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     if (parsedLyrics.type !== "synced") return -1;
 
     // Compensate for reading/vocal latency by leading by 450ms
-    const LYRIC_OFFSET = 0.45;
+    const LYRIC_OFFSET = 0.85;
     const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
     let activeIdx = -1;
@@ -165,7 +165,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
   if (!show) return null;
 
-  const LYRIC_OFFSET = 0.45;
+  const LYRIC_OFFSET = 0.85;
   const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
   return (
