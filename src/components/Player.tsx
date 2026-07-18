@@ -66,9 +66,9 @@ export const Player: React.FC<PlayerProps> = ({
   }, []);
 
   return (
-    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up">
+    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-4 lg:px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up">
       {/* Left: Track Info */}
-      <div className="flex items-center gap-4 w-1/4 min-w-[200px]">
+      <div className="flex items-center gap-3 lg:gap-4 lg:w-1/4 lg:min-w-[200px] shrink-0">
         <div className="w-14 h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5 bg-slate-800 shrink-0 group/thumb">
           <img src={currentTrack.thumbnail} alt={currentTrack.title} className="w-full h-full object-cover" />
           {currentTrack.isResolving ? (
@@ -145,7 +145,7 @@ export const Player: React.FC<PlayerProps> = ({
       </div>
 
       {/* Center: Playback Progress & Controls */}
-      <div className="flex flex-col items-center gap-2 flex-1 max-w-xl px-4">
+      <div className="flex flex-col items-center gap-2 flex-1 max-w-xl px-2 lg:px-4">
         <div className="flex items-center gap-6">
           <button
             onClick={() => setIsShuffled(!isShuffled)}
@@ -224,14 +224,14 @@ export const Player: React.FC<PlayerProps> = ({
       </div>
 
       {/* Right: Volume & Extra Controls */}
-      <div className="flex items-center gap-4 w-1/4 justify-end min-w-[200px]">
+      <div className="flex items-center gap-2 lg:gap-4 lg:w-1/4 justify-end lg:min-w-[200px] shrink-0">
         <button
           onClick={toggleMute}
           className="p-2 text-slate-400 hover:text-white transition-all cursor-pointer"
         >
           {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
         </button>
-        <div className="relative w-24 h-3 flex items-center group">
+        <div className="relative w-24 h-3 hidden lg:flex items-center group">
           <input
             type="range"
             min="0"

@@ -29,12 +29,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setShowCreatePlaylistModal,
 }) => {
   return (
-    <aside className="w-64 bg-[#0e1015] border-r border-white/5 flex flex-col shrink-0 shadow-2xl overflow-y-auto">
-      <div className="p-6 flex flex-col gap-6 flex-1">
+    <aside className="w-16 lg:w-64 bg-[#0e1015] border-r border-white/5 flex flex-col shrink-0 shadow-2xl overflow-y-auto transition-all duration-300">
+      <div className="p-3 lg:p-6 flex flex-col gap-6 flex-1">
         {/* Header / Logo */}
-        <div className="flex items-center gap-2.5">
-          <Disc className="size-8 text-white" />
-          <div>
+        <div className="flex items-center justify-center lg:justify-start gap-2.5">
+          <Disc className="size-8 text-white shrink-0" />
+          <div className="hidden lg:block">
             <span className="font-bold text-lg tracking-wide text-white">
               Aria
             </span>
@@ -48,58 +48,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="flex flex-col gap-1.5">
           <button
             onClick={() => setActiveTab("home")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 justify-center lg:justify-start px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "home"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
             }`}
           >
-            <Home className="w-4 h-4 text-emerald-400" />
-            <span>Home</span>
+            <Home className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="hidden lg:inline">Home</span>
           </button>
 
           <button
             onClick={() => setActiveTab("search")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 justify-center lg:justify-start px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "search"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
             }`}
           >
-            <Search className="w-4 h-4 text-indigo-300" />
-            <span>Search</span>
+            <Search className="w-4 h-4 text-indigo-300 shrink-0" />
+            <span className="hidden lg:inline">Search</span>
           </button>
 
           <button
             onClick={() => setActiveTab("favorites")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 justify-center lg:justify-start px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "favorites"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
             }`}
           >
-            <Heart className="w-4 h-4 text-pink-300 fill-pink-300/15" />
-            <span>Favorites</span>
+            <Heart className="w-4 h-4 text-pink-300 fill-pink-300/15 shrink-0" />
+            <span className="hidden lg:inline">Favorites</span>
           </button>
 
           <button
             onClick={() => setActiveTab("recently-played")}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 justify-center lg:justify-start px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "recently-played"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
             }`}
           >
-            <History className="w-4 h-4 text-sky-300" />
-            <span>Recently Played</span>
+            <History className="w-4 h-4 text-sky-300 shrink-0" />
+            <span className="hidden lg:inline">Recently Played</span>
           </button>
         </nav>
 
         <div className="h-px bg-white/5" />
 
         {/* Playlists Header */}
-        <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+        <div className="flex items-center justify-center lg:justify-between px-2">
+          <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase hidden lg:block">
             Playlists
           </span>
           <button
@@ -116,26 +116,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={pl.id}
               onClick={() => setActiveTab(pl.id)}
-              className={`group flex items-center justify-between px-4 py-2.5 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
+              className={`group flex items-center justify-center lg:justify-between px-3 lg:px-4 py-2.5 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
                 activeTab === pl.id
                   ? "bg-white/10 text-white font-medium border border-white/5"
                   : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
               }`}
             >
-              <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex items-center gap-3 overflow-hidden justify-center lg:justify-start">
                 <ListMusic className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="truncate">{pl.name}</span>
+                <span className="truncate hidden lg:block">{pl.name}</span>
               </div>
               <button
                 onClick={(e) => deletePlaylist(pl.id, e)}
-                className="opacity-0 group-hover:opacity-100 hover:text-red-300 p-1 rounded-md hover:bg-white/5 transition-all cursor-pointer"
+                className="hidden lg:block opacity-0 group-hover:opacity-100 hover:text-red-300 p-1 rounded-md hover:bg-white/5 transition-all cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </button>
           ))}
           {playlists.length === 0 && (
-            <p className="text-xs text-slate-600 italic px-4 py-2">
+            <p className="text-xs text-slate-600 italic px-4 py-2 hidden lg:block">
               No playlists created.
             </p>
           )}
@@ -145,8 +145,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {ytPlaylists.length > 0 && (
           <>
             <div className="h-px bg-white/5" />
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+            <div className="flex items-center justify-center lg:justify-start gap-2 px-2">
+              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase hidden lg:block">
                 YouTube Playlists
               </span>
             </div>
@@ -155,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={pl.id}
                   onClick={() => setActiveTab(`yt:${pl.id}`)}
-                  className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
+                  className={`group flex items-center justify-center lg:justify-start gap-3 px-3 lg:px-4 py-2.5 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
                     activeTab === `yt:${pl.id}`
                       ? "bg-white/10 text-white font-medium border border-white/5"
                       : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
@@ -170,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ) : (
                     <ListMusic className="w-4 h-4 text-violet-400 shrink-0" />
                   )}
-                  <span className="truncate">{pl.title}</span>
+                  <span className="truncate hidden lg:block">{pl.title}</span>
                 </button>
               ))}
             </div>
