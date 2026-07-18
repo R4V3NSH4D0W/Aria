@@ -49,6 +49,19 @@ export default function App() {
     addToRecentlyPlayed,
   } = useLibrary();
 
+  // Automatically minimize sidebar on small viewports, maximize on desktops
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px)");
+    const listener = (e: MediaQueryListEvent) => {
+      setIsSidebarOpen(!e.matches);
+    };
+    // Set initial state
+    setIsSidebarOpen(!media.matches);
+    
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [setIsSidebarOpen]);
+
   const {
     searchQuery,
     loading,
@@ -206,7 +219,7 @@ export default function App() {
           }}
           setShowCreatePlaylistModal={setShowCreatePlaylistModal}
           hasPlayer={!!currentTrack}
-          isOpen={false}
+          isOpen={isSidebarOpen}
         />
 
         {/* Main Content Area */}
@@ -221,6 +234,8 @@ export default function App() {
             handleSearch={handleSearch}
             favoriteSort={favoriteSort}
             setFavoriteSort={setFavoriteSort}
+            isSidebarOpen={isSidebarOpen}
+            toggleSidebar={() => setIsSidebarOpen((open) => !open)}
             onOpenSettings={() => setActiveTab("settings")}
             ytPlaylists={ytPlaylists}
           />
