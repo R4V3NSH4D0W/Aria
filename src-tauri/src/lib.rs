@@ -1438,10 +1438,15 @@ async fn download_track(
     local_data_dir.push(&file_name);
     
     let client = reqwest::Client::new();
-    let res = client
+    let mut req = client
         .get(&stream_url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
-        .send()
+        .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15");
+        
+    if let Some(cookie) = get_cookie_header() {
+        req = req.header("Cookie", cookie);
+    }
+    
+    let res = req.send()
         .await
         .map_err(|e| format!("Download stream request failed: {}", e))?;
         

@@ -1,5 +1,5 @@
 import React from "react";
-import { Music, Play, Shuffle, ArrowLeft } from "lucide-react";
+import { Music, Play, Shuffle, ArrowLeft, Download } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { TrackItem } from "./TrackItem";
 
@@ -48,6 +48,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   downloadTrack,
   deleteDownload,
 }) => {
+  const isLocalContext = activeTab === "favorites" || !activeTab.startsWith("yt:");
+
+  const downloadAll = async () => {
+    if (!downloadTrack) return;
+    const tracksToDownload = tracks.filter(
+      (track) => !downloads?.some((d) => d.videoId === track.videoId) && !track.localPath
+    );
+    for (const track of tracksToDownload) {
+      await downloadTrack(track);
+    }
+  };
+
   if (tracks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-28 gap-4 text-center flex-1">
@@ -105,6 +117,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           <Shuffle className="w-4 h-4 text-indigo-400" />
           <span>Shuffle</span>
         </button>
+        {isLocalContext && downloadTrack && (
+          <button
+            onClick={downloadAll}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 hover:border-white/20 font-bold text-sm transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
+          >
+            <Download className="w-4 h-4 text-emerald-400" />
+            <span>Download All</span>
+          </button>
+        )}
       </div>
 
       {tracks.map((track, idx) => {
