@@ -150,34 +150,13 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
               {parsedLyrics.lines.map((line, idx) => {
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
-                  const words = line.text.split(/\s+/);
-                  // Calculate next line time, or fallback to audio duration
-                  const nextTime = parsedLyrics.lines[idx + 1]?.time ?? (audioRef.current?.duration || line.time + 5);
-                  const lineDuration = Math.max(nextTime - line.time, 0.5);
-                  const wordDuration = lineDuration / Math.max(words.length, 1);
-                  const activeWordIdx = Math.floor((preciseProgress - line.time) / wordDuration);
-
                   return (
                     <p
                       key={idx}
                       id={`lyric-line-${idx}`}
-                      className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold scale-[1.03] transition-all duration-150 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                      className="text-center text-3xl sm:text-4xl lg:text-5xl font-black text-white scale-[1.02] transition-all duration-300 origin-center drop-shadow-[0_0_18px_rgba(255,255,255,0.55)] opacity-100 leading-tight"
                     >
-                      {words.map((word, wIdx) => {
-                        const isWordActive = wIdx === activeWordIdx;
-                        return (
-                          <span
-                            key={wIdx}
-                            className={`transition-colors duration-150 ${
-                              isWordActive
-                                ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
-                                : "text-white/45"
-                            }`}
-                          >
-                            {word}
-                          </span>
-                        );
-                      })}
+                      {line.text}
                     </p>
                   );
                 } else {
