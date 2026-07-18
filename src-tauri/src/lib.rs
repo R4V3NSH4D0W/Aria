@@ -1228,14 +1228,16 @@ fn find_playlist_panel_renderer(v: &Value) -> Option<&Value> {
     None
 }
 
-async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: String) -> Result<Vec<Value>, String> {
-    let video_id = if browse_id.len() > 2 {
-        &browse_id[2..]
+async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: String, video_id: Option<String>) -> Result<Vec<Value>, String> {
+    let resolved_video_id = if let Some(vid) = video_id {
+        vid
+    } else if browse_id.len() > 2 {
+        browse_id[2..].to_string()
     } else {
         return Err("Invalid radio playlist ID".to_string());
     };
 
-    println!("get_yt_radio_tracks_internal: video_id = {}, playlist_id = {}", video_id, browse_id);
+    println!("get_yt_radio_tracks_internal: video_id = {}, playlist_id = {}", resolved_video_id, browse_id);
 
     let payload = serde_json::json!({
         "context": {
@@ -1247,7 +1249,7 @@ async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: Strin
                 "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0,gzip(gfe)"
             }
         },
-        "videoId": video_id,
+        "videoId": resolved_video_id,
         "playlistId": browse_id
     });
 
@@ -1296,8 +1298,8 @@ async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: Strin
 }
 
 #[tauri::command]
-async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String> {
-    println!("get_yt_playlist_tracks: browse_id = {}", browse_id);
+async fn get_yt_playlist_tracks(browse_id: String, video_id: Option<String>) -> Result<Vec<Value>, String> {
+    println!("get_yt_playlist_tracks: browse_id = {}, video_id = {:?}", browse_id, video_id);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
@@ -1305,7 +1307,7 @@ async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String>
         .map_err(|e| e.to_string())?;
 
     if browse_id.starts_with("RD") {
-        return get_yt_radio_tracks_internal(&client, browse_id).await;
+        return get_yt_radio_tracks_internal(&client, browse_id, video_id).await;
     }
 
     // Ensure browseId starts with VL (YTM playlist convention)

@@ -4,7 +4,7 @@ import { SavedRadio } from "../types";
 
 interface YtRadiosViewProps {
   savedRadios: SavedRadio[];
-  onSelectRadio: (radioId: string) => void;
+  onSelectRadio: (radioId: string, videoId?: string) => void;
   onDeleteRadio: (radioId: string, e: React.MouseEvent) => void;
   onRenameRadio: (radioId: string, newTitle: string) => void;
 }
@@ -62,9 +62,9 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
       setErrorMsg("");
       setUrlInput("");
       if (parsed.playlistId) {
-        onSelectRadio(parsed.playlistId);
+        onSelectRadio(parsed.playlistId, parsed.videoId);
       } else if (parsed.videoId) {
-        onSelectRadio(`RD${parsed.videoId}`);
+        onSelectRadio(`RD${parsed.videoId}`, parsed.videoId);
       }
     } else {
       setErrorMsg("Invalid YouTube link. Please paste a valid track or mix URL.");
@@ -129,7 +129,7 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
           {savedRadios.map((radio) => (
             <div
               key={radio.id}
-              onClick={() => onSelectRadio(radio.id)}
+              onClick={() => onSelectRadio(radio.id, radio.videoId)}
               className="group relative transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
             >
               {/* Thumbnail Container */}

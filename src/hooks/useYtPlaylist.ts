@@ -12,7 +12,7 @@ export function useYtPlaylist() {
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const abortRef = useRef<boolean>(false);
 
-  const loadPlaylist = useCallback(async (browseId: string, force = false) => {
+  const loadPlaylist = useCallback(async (browseId: string, videoId?: string, force = false) => {
     if (!browseId) return;
     if (loadedId === browseId && !force) return; // already loaded
 
@@ -29,7 +29,7 @@ export function useYtPlaylist() {
     setTracks([]);
 
     try {
-      const result = await invoke<Track[]>("get_yt_playlist_tracks", { browseId });
+      const result = await invoke<Track[]>("get_yt_playlist_tracks", { browseId, videoId });
       if (!abortRef.current) {
         cache.set(browseId, result);
         setTracks(result);
@@ -53,5 +53,17 @@ export function useYtPlaylist() {
     setLoading(false);
   }, []);
 
-  return { tracks, loading, error, loadedId, loadPlaylist, clearPlaylist };
+  const removeTrack = useCallback((videoId: string) => {
+    console.log("useYtPlaylist removeTrack called for videoId:", videoId);
+    setTracks((prev) => {
+      const updated = prev.filter((t) => t.videoId !== videoId);
+      console.log("useYtPlaylist updated tracks count:", updated.length);
+      if (loadedId) {
+        cache.set(loadedId, updated);
+      }
+      return updated;
+    });
+  }, [loadedId]);
+
+  return { tracks, loading, error, loadedId, loadPlaylist, clearPlaylist, removeTrack };
 }

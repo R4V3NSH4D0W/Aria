@@ -18,7 +18,7 @@ import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 import { YtRadiosView } from "./components/YtRadiosView";
 import { SavedRadio } from "./types";
@@ -57,11 +57,33 @@ export default function App() {
     deletePlaylist,
     handleTabChange: baseHandleTabChange,
     addTrackToPlaylist,
-    removeTrackFromPlaylist,
+    removeTrackFromPlaylist: baseRemoveTrackFromPlaylist,
     addToRecentlyPlayed,
     downloadTrack,
     deleteDownload,
   } = useLibrary();
+
+  const removeTrackFromPlaylist = (playlistId: string, videoId: string) => {
+    console.log("removeTrackFromPlaylist called with:", playlistId, videoId);
+    if (playlistId.startsWith("yt:")) {
+      removeYtTrack(videoId);
+      if (playlistId.startsWith("yt:RD")) {
+        const radioId = playlistId.slice(3);
+        setSavedRadios((prev) =>
+          prev.map((r) => {
+            if (r.id === radioId && r.tracks) {
+              const updatedTracks = r.tracks.filter((t) => t.videoId !== videoId);
+              const collageThumbnails = updatedTracks.slice(0, 4).map((t) => t.thumbnail);
+              return { ...r, tracks: updatedTracks, thumbnails: collageThumbnails };
+            }
+            return r;
+          })
+        );
+      }
+      return;
+    }
+    baseRemoveTrackFromPlaylist(playlistId, videoId);
+  };
 
   const [showLyricsMode, setShowLyricsMode] = useState(false);
   const [savedRadios, setSavedRadios] = useState<SavedRadio[]>(() => {
@@ -154,52 +176,61 @@ export default function App() {
     tracks: ytPlaylistTracks,
     loading: ytPlaylistLoading,
     loadPlaylist,
+    loadedId,
+    removeTrack: removeYtTrack,
   } = useYtPlaylist();
+
+  // Seed videoId to pass to YouTube radio backend (for RDGMEM playlists)
+  const ytSeedVideoIdRef = useRef<string | undefined>(undefined);
 
   // Load YT playlist tracks whenever a yt: tab is activated
   useEffect(() => {
     if (activeTab.startsWith("yt:")) {
       const browseId = activeTab.slice(3); // strip "yt:"
-      loadPlaylist(browseId);
+      loadPlaylist(browseId, ytSeedVideoIdRef.current);
     }
   }, [activeTab, loadPlaylist]);
 
   // Auto-save & update YouTube Radio mixes to our Saved Radios list
   useEffect(() => {
-    if (activeTab.startsWith("yt:RD") && ytPlaylistTracks.length > 0) {
+    if (activeTab.startsWith("yt:RD") && ytPlaylistTracks.length > 0 && loadedId === activeTab.slice(3)) {
       const radioId = activeTab.slice(3);
-      const existingIndex = savedRadios.findIndex((r) => r.id === radioId);
       const firstTrack = ytPlaylistTracks[0];
       const collageThumbnails = ytPlaylistTracks.slice(0, 4).map((t) => t.thumbnail);
 
-      if (existingIndex === -1) {
-        const newRadio: SavedRadio = {
-          id: radioId,
-          videoId: radioId.slice(2),
-          title: `${firstTrack.title} Radio`,
-          thumbnail: firstTrack.thumbnail,
-          thumbnails: collageThumbnails,
-          tracks: ytPlaylistTracks,
-          addedAt: Date.now(),
-        };
-        setSavedRadios((prev) => [newRadio, ...prev]);
-      } else {
-        const existingRadio = savedRadios[existingIndex];
-        // Only update if data has changed to prevent infinite rendering loops
-        const tracksChanged = !existingRadio.tracks || existingRadio.tracks.length !== ytPlaylistTracks.length;
-        const thumbsChanged = !existingRadio.thumbnails || existingRadio.thumbnails.length !== collageThumbnails.length;
-        if (tracksChanged || thumbsChanged) {
-          setSavedRadios((prev) =>
-            prev.map((r) =>
+      setSavedRadios((prev) => {
+        const existingIndex = prev.findIndex((r) => r.id === radioId);
+        if (existingIndex === -1) {
+          const newRadio: SavedRadio = {
+            id: radioId,
+            videoId: radioId.slice(2),
+            title: `${firstTrack.title} Radio`,
+            thumbnail: firstTrack.thumbnail,
+            thumbnails: collageThumbnails,
+            tracks: ytPlaylistTracks,
+            addedAt: Date.now(),
+          };
+          return [newRadio, ...prev];
+        } else {
+          const existingRadio = prev[existingIndex];
+          const tracksChanged = !existingRadio.tracks || existingRadio.tracks.length !== ytPlaylistTracks.length;
+          const thumbsChanged = !existingRadio.thumbnails || existingRadio.thumbnails.length !== collageThumbnails.length;
+          if (tracksChanged || thumbsChanged) {
+            return prev.map((r) =>
               r.id === radioId
-                ? { ...r, thumbnails: collageThumbnails, tracks: ytPlaylistTracks }
+                ? {
+                    ...r,
+                    thumbnails: collageThumbnails,
+                    tracks: ytPlaylistTracks
+                  }
                 : r
-            )
-          );
+            );
+          }
         }
-      }
+        return prev;
+      });
     }
-  }, [activeTab, ytPlaylistTracks, savedRadios]);
+  }, [activeTab, ytPlaylistTracks, loadedId]);
 
 
   const handleTabChange = (tab: string) => {
@@ -230,10 +261,10 @@ export default function App() {
       return sortedFavorites;
     }
     if (activeTab.startsWith("yt:")) {
-      if (activeTab.startsWith("yt:RD") && !isOnline) {
+      if (activeTab.startsWith("yt:RD")) {
         const radioId = activeTab.slice(3);
         const saved = savedRadios.find((r) => r.id === radioId);
-        if (saved?.tracks) {
+        if (saved?.tracks && saved.tracks.length > 0) {
           return saved.tracks;
         }
       }
@@ -462,7 +493,10 @@ export default function App() {
                   ) : activeTab === "yt-radios" ? (
                     <YtRadiosView
                       savedRadios={savedRadios}
-                      onSelectRadio={(id) => setActiveTab(`yt:${id}`)}
+                      onSelectRadio={(id, videoId) => {
+                        ytSeedVideoIdRef.current = videoId;
+                        setActiveTab(`yt:${id}`);
+                      }}
                       onDeleteRadio={deleteSavedRadio}
                       onRenameRadio={renameSavedRadio}
                     />
