@@ -18,6 +18,8 @@ export function useLibrary() {
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [downloads, setDownloads] = useState<Track[]>([]);
+  const [downloadingTrackIds, setDownloadingTrackIds] = useState<Set<string>>(new Set());
 
   const customSetShowCreatePlaylistModal = useCallback((show: boolean | Track) => {
     if (typeof show === "boolean") {
@@ -49,6 +51,10 @@ export function useLibrary() {
       // Restore cached YT playlists so Sidebar shows them without visiting Settings
       const cachedYt = localStorage.getItem("aria_yt_playlists");
       if (cachedYt) setYtPlaylists(JSON.parse(cachedYt));
+
+      // Restore downloads
+      const savedDownloads = localStorage.getItem("aria_downloads");
+      if (savedDownloads) setDownloads(JSON.parse(savedDownloads));
 
       // Push saved cookie back into Rust backend on every app start
       const savedCookie = localStorage.getItem("aria_yt_cookie");
@@ -188,6 +194,75 @@ export function useLibrary() {
     });
   }, [activeTab]);
 
+  const downloadTrack = useCallback(async (track: Track) => {
+    // Only allow downloading if the track is in Favorites or custom local playlists
+    const isInFavs = favorites.some((t) => t.videoId === track.videoId);
+    const isInLocalPlaylists = playlists.some((p) => p.tracks.some((t) => t.videoId === track.videoId));
+    if (!isInFavs && !isInLocalPlaylists) {
+      console.warn("Download blocked: Track must be in Favorites or an internal playlist.");
+      return;
+    }
+
+    if (downloadingTrackIds.has(track.videoId)) return;
+    
+    setDownloadingTrackIds((prev) => {
+      const next = new Set(prev);
+      next.add(track.videoId);
+      return next;
+    });
+
+    try {
+      const rawJson = await invoke<string>("get_yt_stream_direct", {
+        videoId: track.videoId,
+      });
+      const streamData = JSON.parse(rawJson);
+      const streamUrl = streamData.url;
+
+      if (!streamUrl) {
+        throw new Error("Could not extract stream URL");
+      }
+
+      const localPath = await invoke<string>("download_track", {
+        videoId: track.videoId,
+        streamUrl,
+      });
+
+      const downloadedTrack: Track = {
+        ...track,
+        localPath,
+        downloadedAt: Date.now(),
+      };
+
+      setDownloads((prev) => {
+        const filtered = prev.filter((t) => t.videoId !== track.videoId);
+        const next = [...filtered, downloadedTrack];
+        localStorage.setItem("aria_downloads", JSON.stringify(next));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to download track", e);
+    } finally {
+      setDownloadingTrackIds((prev) => {
+        const next = new Set(prev);
+        next.delete(track.videoId);
+        return next;
+      });
+    }
+  }, [favorites, playlists, downloadingTrackIds]);
+
+  const deleteDownload = useCallback(async (videoId: string) => {
+    try {
+      await invoke("delete_downloaded_track", { videoId });
+      setDownloads((prev) => {
+        const next = prev.filter((t) => t.videoId !== videoId);
+        localStorage.setItem("aria_downloads", JSON.stringify(next));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to delete downloaded track", e);
+    }
+  }, []);
+
   return {
     playlists,
     ytPlaylists,
@@ -200,6 +275,8 @@ export function useLibrary() {
     showCreatePlaylistModal,
     newPlaylistName,
     activeDropdownTrackId,
+    downloads,
+    downloadingTrackIds,
     setPlaylists,
     setYtPlaylists,
     setFavorites,
@@ -220,5 +297,7 @@ export function useLibrary() {
     addTrackToPlaylist,
     removeTrackFromPlaylist,
     addToRecentlyPlayed,
+    downloadTrack,
+    deleteDownload,
   };
 }

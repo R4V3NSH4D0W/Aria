@@ -9,6 +9,7 @@ import {
   History,
   Home,
   CloudLightning,
+  Download,
 } from "lucide-react";
 import { Playlist } from "../types";
 
@@ -100,6 +101,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <History className="w-4 h-4 text-sky-300 shrink-0" />
             {isOpen && <span>Recently Played</span>}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("downloads")}
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+              activeTab === "downloads"
+                ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
+            }`}
+            title={!isOpen ? "Downloads" : undefined}
+          >
+            <Download className="w-4 h-4 text-amber-300 shrink-0" />
+            {isOpen && <span>Downloads</span>}
           </button>
 
           {hasYtCookie && (

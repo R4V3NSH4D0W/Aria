@@ -1415,6 +1415,95 @@ async fn get_yt_lyrics(
     Ok(lyrics_text)
 }
 
+use std::fs::{self, File};
+use std::io::Write;
+use tauri::Manager;
+
+#[tauri::command]
+async fn download_track(
+    app_handle: tauri::AppHandle,
+    video_id: String,
+    stream_url: String,
+) -> Result<String, String> {
+    let mut local_data_dir = app_handle
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get local data dir: {}", e))?;
+    
+    local_data_dir.push("downloads");
+    fs::create_dir_all(&local_data_dir)
+        .map_err(|e| format!("Failed to create downloads directory: {}", e))?;
+    
+    let file_name = format!("{}.mp3", video_id);
+    local_data_dir.push(&file_name);
+    
+    let client = reqwest::Client::new();
+    let res = client
+        .get(&stream_url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .send()
+        .await
+        .map_err(|e| format!("Download stream request failed: {}", e))?;
+        
+    if !res.status().is_success() {
+        return Err(format!("Download stream returned status {}", res.status()));
+    }
+    
+    let bytes = res.bytes().await.map_err(|e| format!("Failed to parse stream bytes: {}", e))?;
+    
+    let mut file = File::create(&local_data_dir)
+        .map_err(|e| format!("Failed to create destination file: {}", e))?;
+        
+    file.write_all(&bytes)
+        .map_err(|e| format!("Failed to write stream bytes to file: {}", e))?;
+        
+    Ok(local_data_dir.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn check_download_exists(
+    app_handle: tauri::AppHandle,
+    video_id: String,
+) -> Result<Option<String>, String> {
+    let mut local_data_dir = app_handle
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get local data dir: {}", e))?;
+        
+    local_data_dir.push("downloads");
+    let file_name = format!("{}.mp3", video_id);
+    local_data_dir.push(&file_name);
+    
+    if local_data_dir.exists() {
+        Ok(Some(local_data_dir.to_string_lossy().into_owned()))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+fn delete_downloaded_track(
+    app_handle: tauri::AppHandle,
+    video_id: String,
+) -> Result<bool, String> {
+    let mut local_data_dir = app_handle
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get local data dir: {}", e))?;
+        
+    local_data_dir.push("downloads");
+    let file_name = format!("{}.mp3", video_id);
+    local_data_dir.push(&file_name);
+    
+    if local_data_dir.exists() {
+        fs::remove_file(&local_data_dir)
+            .map_err(|e| format!("Failed to delete file: {}", e))?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1430,7 +1519,10 @@ pub fn run() {
             get_yt_artist,
             get_yt_user_playlists,
             get_yt_playlist_tracks,
-            get_yt_lyrics
+            get_yt_lyrics,
+            download_track,
+            check_download_exists,
+            delete_downloaded_track
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -7,6 +7,8 @@ export interface Track {
   thumbnail: string;
   isResolving?: boolean;
   addedAt?: number;
+  localPath?: string;
+  downloadedAt?: number;
 }
 
 export interface ArtistItem {

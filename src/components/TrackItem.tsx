@@ -8,6 +8,8 @@ import {
   Heart,
   Trash2,
   Clock,
+  Download,
+  Check,
 } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
@@ -27,6 +29,10 @@ interface TrackItemProps {
   removeTrackFromPlaylist: (playlistId: string, videoId: string) => void;
   playTrack: (track: Track) => void;
   setShowCreatePlaylistModal: (show: any) => void;
+  downloads?: Track[];
+  downloadingTrackIds?: Set<string>;
+  downloadTrack?: (track: Track) => void;
+  deleteDownload?: (videoId: string) => void;
 }
 
 export const TrackItem: React.FC<TrackItemProps> = ({
@@ -44,7 +50,17 @@ export const TrackItem: React.FC<TrackItemProps> = ({
   removeTrackFromPlaylist,
   playTrack,
   setShowCreatePlaylistModal,
+  downloads,
+  downloadingTrackIds,
+  downloadTrack,
+  deleteDownload,
 }) => {
+  const isDownloaded = downloads?.some((t) => t.videoId === track.videoId) || !!track.localPath;
+  const isDownloading = downloadingTrackIds?.has(track.videoId);
+  const isLocalContext = activeTab === "favorites" || activeTab === "downloads" || (
+    activeTab !== "search" && activeTab !== "home" && activeTab !== "yt-playlists" && activeTab !== "recently-played" && !activeTab.startsWith("yt:")
+  );
+
   return (
     <div
       onClick={() => playTrack(track)}
@@ -154,6 +170,38 @@ export const TrackItem: React.FC<TrackItemProps> = ({
             </div>
           )}
         </div>
+
+        {isLocalContext && (
+          <div className="flex items-center">
+            {isDownloading ? (
+              <div className="p-2 text-indigo-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+            ) : isDownloaded ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (deleteDownload) deleteDownload(track.videoId);
+                }}
+                className="p-2 rounded-lg hover:bg-white/10 text-emerald-400 transition-all cursor-pointer"
+                title="Remove local download"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (downloadTrack) downloadTrack(track);
+                }}
+                className="p-2 rounded-lg hover:bg-white/10 text-slate-500 hover:text-indigo-400 transition-all cursor-pointer"
+                title="Download offline"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Favorite Button */}
         <button

@@ -40,6 +40,8 @@ export default function App() {
     showCreatePlaylistModal,
     newPlaylistName,
     activeDropdownTrackId,
+    downloads,
+    downloadingTrackIds,
     setYtPlaylists,
     setFavoriteSort,
     setActiveTab,
@@ -55,6 +57,8 @@ export default function App() {
     addTrackToPlaylist,
     removeTrackFromPlaylist,
     addToRecentlyPlayed,
+    downloadTrack,
+    deleteDownload,
   } = useLibrary();
 
   const [showLyricsMode, setShowLyricsMode] = useState(false);
@@ -146,6 +150,9 @@ export default function App() {
     }
     if (activeTab === "recently-played") {
       return recentlyPlayed;
+    }
+    if (activeTab === "downloads") {
+      return downloads;
     }
     if (activeTab === "search") {
       return searchResults.filter((item): item is Track => !("type" in item && item.type === "artist"));
@@ -377,6 +384,10 @@ export default function App() {
                       isFavorite={isFavorite}
                       removeTrackFromPlaylist={removeTrackFromPlaylist}
                       setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                      downloads={downloads}
+                      downloadingTrackIds={downloadingTrackIds}
+                      downloadTrack={downloadTrack}
+                      deleteDownload={deleteDownload}
                     />
                   ) : activeTab === "yt-playlists" ? (
                     <YtPlaylistsView
@@ -410,6 +421,10 @@ export default function App() {
                       isFavorite={isFavorite}
                       removeTrackFromPlaylist={removeTrackFromPlaylist}
                       setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                      downloads={downloads}
+                      downloadingTrackIds={downloadingTrackIds}
+                      downloadTrack={downloadTrack}
+                      deleteDownload={deleteDownload}
                       onBack={activeTab.startsWith("yt:") ? () => setActiveTab("yt-playlists") : undefined}
                     />
                   )}

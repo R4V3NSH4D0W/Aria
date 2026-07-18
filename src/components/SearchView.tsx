@@ -22,6 +22,10 @@ interface SearchViewProps {
   isFavorite: (track: Track) => boolean;
   removeTrackFromPlaylist: (playlistId: string, videoId: string) => void;
   setShowCreatePlaylistModal: (show: any) => void;
+  downloads?: Track[];
+  downloadingTrackIds?: Set<string>;
+  downloadTrack?: (track: Track) => void;
+  deleteDownload?: (videoId: string) => void;
 }
 
 export const SearchView: React.FC<SearchViewProps> = ({
@@ -42,6 +46,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
   isFavorite,
   removeTrackFromPlaylist,
   setShowCreatePlaylistModal,
+  downloads,
+  downloadingTrackIds,
+  downloadTrack,
+  deleteDownload,
 }) => {
   if (searchError) {
     return (
@@ -139,6 +147,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
             removeTrackFromPlaylist={removeTrackFromPlaylist}
             playTrack={playTrack}
             setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            downloads={downloads}
+            downloadingTrackIds={downloadingTrackIds}
+            downloadTrack={downloadTrack}
+            deleteDownload={deleteDownload}
           />
         );
       })}

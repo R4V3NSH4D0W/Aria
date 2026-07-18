@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Track } from "../types";
 
 interface UsePlaybackProps {
@@ -62,18 +62,35 @@ export function usePlayback({
       setCurrentTrack({ ...track, isResolving: true });
 
       try {
-        const rawJson = await invoke<string>("get_yt_stream_direct", {
+        const localPath = await invoke<string | null>("check_download_exists", {
           videoId: track.videoId,
         });
-        const streamData = JSON.parse(rawJson) as {
-          url: string;
-          duration: number;
-        };
-        if (streamData.url) {
-          setResolvedAudioUrl(streamData.url);
-          setCurrentTrack({ ...track, isResolving: false });
+
+        let targetAudioUrl = "";
+        let targetDuration = track.duration || 0;
+
+        if (localPath) {
+          targetAudioUrl = convertFileSrc(localPath);
+          console.log("Playing downloaded local track:", targetAudioUrl);
+        } else {
+          const rawJson = await invoke<string>("get_yt_stream_direct", {
+            videoId: track.videoId,
+          });
+          const streamData = JSON.parse(rawJson) as {
+            url: string;
+            duration: number;
+          };
+          targetAudioUrl = streamData.url;
           if (streamData.duration > 0) {
-            setDuration(streamData.duration);
+            targetDuration = streamData.duration;
+          }
+        }
+
+        if (targetAudioUrl) {
+          setResolvedAudioUrl(targetAudioUrl);
+          setCurrentTrack({ ...track, isResolving: false });
+          if (targetDuration > 0) {
+            setDuration(targetDuration);
           }
 
           // Fetch lyrics asynchronously
@@ -83,7 +100,7 @@ export function usePlayback({
             videoId: track.videoId,
             title: track.title,
             artist: track.uploaderName,
-            duration: Math.round(track.duration || streamData.duration || 0),
+            duration: Math.round(targetDuration || 0),
           })
             .then((lyricText) => {
               setLyrics(lyricText);

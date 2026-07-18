@@ -20,6 +20,10 @@ interface LibraryViewProps {
   removeTrackFromPlaylist: (playlistId: string, videoId: string) => void;
   setShowCreatePlaylistModal: (show: any) => void;
   onBack?: () => void;
+  downloads?: Track[];
+  downloadingTrackIds?: Set<string>;
+  downloadTrack?: (track: Track) => void;
+  deleteDownload?: (videoId: string) => void;
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -39,6 +43,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   removeTrackFromPlaylist,
   setShowCreatePlaylistModal,
   onBack,
+  downloads,
+  downloadingTrackIds,
+  downloadTrack,
+  deleteDownload,
 }) => {
   if (tracks.length === 0) {
     return (
@@ -53,6 +61,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           <p className="text-sm text-slate-500 max-w-xs mt-1">
             {activeTab === "favorites"
               ? "Tap the heart icon on any song to add it to your favorites."
+              : activeTab === "downloads"
+              ? "No downloaded tracks. Add tracks to your Favorites or internal playlists, then download them for offline listening."
               : "This playlist is empty. Search and add tracks to populate it!"}
           </p>
         </div>
@@ -116,6 +126,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             removeTrackFromPlaylist={removeTrackFromPlaylist}
             playTrack={playTrack}
             setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            downloads={downloads}
+            downloadingTrackIds={downloadingTrackIds}
+            downloadTrack={downloadTrack}
+            deleteDownload={deleteDownload}
           />
         );
       })}
