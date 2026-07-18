@@ -1438,29 +1438,71 @@ async fn download_track(
     local_data_dir.push(&file_name);
     
     let client = reqwest::Client::new();
-    let mut req = client
+    
+    // 1. Get total file length using a 0-0 range request
+    let mut req_len = client
         .get(&stream_url)
-        .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15");
+        .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15")
+        .header("Range", "bytes=0-0");
         
     if let Some(cookie) = get_cookie_header() {
-        req = req.header("Cookie", cookie);
+        req_len = req_len.header("Cookie", cookie);
     }
     
-    let res = req.send()
-        .await
-        .map_err(|e| format!("Download stream request failed: {}", e))?;
-        
-    if !res.status().is_success() {
-        return Err(format!("Download stream returned status {}", res.status()));
-    }
+    let res_len = req_len.send().await.map_err(|e| format!("Length check failed: {}", e))?;
     
-    let bytes = res.bytes().await.map_err(|e| format!("Failed to parse stream bytes: {}", e))?;
-    
+    let total_size = if let Some(content_range) = res_len.headers().get("Content-Range") {
+        let range_str = content_range.to_str().unwrap_or("");
+        if let Some(pos) = range_str.rfind('/') {
+            range_str[pos + 1..].parse::<u64>().unwrap_or(0)
+        } else {
+            0
+        }
+    } else {
+        res_len.content_length().unwrap_or(0)
+    };
+
     let mut file = File::create(&local_data_dir)
         .map_err(|e| format!("Failed to create destination file: {}", e))?;
+
+    if total_size == 0 {
+        // Fallback: download whole file in a single request if length is undetermined
+        let mut req_fallback = client
+            .get(&stream_url)
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15");
+        if let Some(cookie) = get_cookie_header() {
+            req_fallback = req_fallback.header("Cookie", cookie);
+        }
+        let res_fallback = req_fallback.send().await.map_err(|e| e.to_string())?;
+        let bytes = res_fallback.bytes().await.map_err(|e| e.to_string())?;
+        file.write_all(&bytes).map_err(|e| e.to_string())?;
+    } else {
+        // Download in 1MB chunks to bypass YouTube playback speed throttling
+        let chunk_size = 1_048_576; // 1MB
+        let mut start = 0;
         
-    file.write_all(&bytes)
-        .map_err(|e| format!("Failed to write stream bytes to file: {}", e))?;
+        while start < total_size {
+            let end = std::cmp::min(start + chunk_size - 1, total_size - 1);
+            let mut req_chunk = client
+                .get(&stream_url)
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15")
+                .header("Range", format!("bytes={}-{}", start, end));
+                
+            if let Some(cookie) = get_cookie_header() {
+                req_chunk = req_chunk.header("Cookie", cookie);
+            }
+            
+            let res_chunk = req_chunk.send().await.map_err(|e| format!("Chunk request failed: {}", e))?;
+            if !res_chunk.status().is_success() && res_chunk.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+                return Err(format!("Chunk returned status {}", res_chunk.status()));
+            }
+            
+            let bytes = res_chunk.bytes().await.map_err(|e| format!("Failed to read chunk bytes: {}", e))?;
+            file.write_all(&bytes).map_err(|e| format!("Failed to write chunk to disk: {}", e))?;
+            
+            start += chunk_size;
+        }
+    }
         
     Ok(local_data_dir.to_string_lossy().into_owned())
 }
