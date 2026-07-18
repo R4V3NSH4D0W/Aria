@@ -1,11 +1,14 @@
 import React, { useMemo, useEffect } from "react";
 import { Play, Clock } from "lucide-react";
-import { Track, HomeSection, Playlist } from "../types";
+import { Track, HomeSection, Playlist, YtPlaylist } from "../types";
 import { HomeSkeleton } from "./home/HomeSkeleton";
 import { SpeedDial } from "./home/SpeedDial";
 import { ShelfCarousel } from "./home/ShelfCarousel";
 import { QuickPicks } from "./home/QuickPicks";
 import { MoodsGenres } from "./home/MoodsGenres";
+import { ForgottenFavorites } from "./home/ForgottenFavorites";
+import { AccountPlaylists } from "./home/AccountPlaylists";
+import { CommunityPlaylists, CommunityPlaylist } from "./home/CommunityPlaylists";
 
 interface HomeProps {
   playSongs: (
@@ -17,6 +20,7 @@ interface HomeProps {
   isPlaying: boolean;
   favorites: Track[];
   playlists: Playlist[];
+  ytPlaylists: YtPlaylist[];
   recentlyPlayed: Track[];
   onOpenTab: (tab: string) => void;
   onExploreGenre: (genre: string) => void;
@@ -24,6 +28,9 @@ interface HomeProps {
   loading: boolean;
   error: string | null;
   fetchHome: () => void;
+  communityPlaylists: CommunityPlaylist[];
+  communityLoading: boolean;
+  fetchExplore: () => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -32,6 +39,7 @@ export const Home: React.FC<HomeProps> = ({
   isPlaying,
   favorites,
   playlists,
+  ytPlaylists,
   recentlyPlayed,
   onOpenTab,
   onExploreGenre,
@@ -39,10 +47,14 @@ export const Home: React.FC<HomeProps> = ({
   loading,
   error,
   fetchHome,
+  communityPlaylists,
+  communityLoading,
+  fetchExplore,
 }) => {
   useEffect(() => {
     fetchHome();
-  }, [fetchHome]);
+    fetchExplore();
+  }, [fetchHome, fetchExplore]);
 
   const discoverTracks = useMemo(() => {
     const allTracks = sections.flatMap((section) => section.items);
@@ -92,6 +104,22 @@ export const Home: React.FC<HomeProps> = ({
           />
         )}
 
+        {/* Forgotten Favorites — liked tracks not played recently */}
+        <ForgottenFavorites
+          favorites={favorites}
+          recentlyPlayed={recentlyPlayed}
+          playSongs={playSongs}
+          currentTrack={currentTrack}
+          isPlaying={isPlaying}
+        />
+
+        {/* From the Community — trending / new-release playlists */}
+        <CommunityPlaylists
+          playlists={communityPlaylists}
+          loading={communityLoading}
+          onExplorePlaylist={onExploreGenre}
+        />
+
         {/* Daily Discover Carousel */}
         {discoverTracks.length > 0 && (
           <ShelfCarousel
@@ -106,6 +134,12 @@ export const Home: React.FC<HomeProps> = ({
             scrollbarHide={true}
           />
         )}
+
+        {/* Account Playlists — user's synced YT Music playlists (only when logged in) */}
+        <AccountPlaylists
+          playlists={ytPlaylists}
+          onOpenPlaylist={onOpenTab}
+        />
 
         {/* Dynamic recommend shelves */}
         {sections.map((section, idx) => {

@@ -15,6 +15,10 @@ import { useLibrary } from "./hooks/useLibrary";
 import { useSearch } from "./hooks/useSearch";
 import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
+import { useExplore } from "./hooks/useExplore";
+import { useYtPlaylist } from "./hooks/useYtPlaylist";
+import { useEffect } from "react";
+import { YtPlaylistsView } from "./components/YtPlaylistsView";
 
 export default function App() {
   const {
@@ -77,6 +81,26 @@ export default function App() {
     fetchHome,
   } = useHome();
 
+  const {
+    playlists: communityPlaylists,
+    loading: communityLoading,
+    fetchExplore,
+  } = useExplore();
+
+  const {
+    tracks: ytPlaylistTracks,
+    loading: ytPlaylistLoading,
+    loadPlaylist,
+  } = useYtPlaylist();
+
+  // Load YT playlist tracks whenever a yt: tab is activated
+  useEffect(() => {
+    if (activeTab.startsWith("yt:")) {
+      const browseId = activeTab.slice(3); // strip "yt:"
+      loadPlaylist(browseId);
+    }
+  }, [activeTab, loadPlaylist]);
+
   const handleTabChange = (tab: string) => {
     baseHandleTabChange(tab);
     setSelectedArtist(null);
@@ -103,6 +127,9 @@ export default function App() {
         return favoriteSort === "recent" ? right - left : left - right;
       });
       return sortedFavorites;
+    }
+    if (activeTab.startsWith("yt:")) {
+      return ytPlaylistTracks;
     }
     const pl = playlists.find((p) => p.id === activeTab);
     return pl ? pl.tracks : [];
@@ -174,12 +201,12 @@ export default function App() {
             activeTab={activeTab}
             setActiveTab={handleTabChange}
             playlists={playlists}
-            ytPlaylists={ytPlaylists}
             deletePlaylist={(id, e) => {
               deletePlaylist(id, e);
               setSelectedArtist(null);
             }}
             setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            hasPlayer={!!currentTrack}
           />
         )}
 
@@ -241,6 +268,7 @@ export default function App() {
                   isPlaying={isPlaying}
                   favorites={favorites}
                   playlists={playlists}
+                  ytPlaylists={ytPlaylists}
                   recentlyPlayed={recentlyPlayed}
                   onOpenTab={setActiveTab}
                   onExploreGenre={handleExploreGenre}
@@ -248,6 +276,9 @@ export default function App() {
                   loading={homeLoading}
                   error={homeError}
                   fetchHome={fetchHome}
+                  communityPlaylists={communityPlaylists}
+                  communityLoading={communityLoading}
+                  fetchExplore={fetchExplore}
                 />
               ) : activeTab === "settings" ? (
                 <Settings onPlaylistsSync={setYtPlaylists} />
@@ -280,6 +311,21 @@ export default function App() {
                       removeTrackFromPlaylist={removeTrackFromPlaylist}
                       setShowCreatePlaylistModal={setShowCreatePlaylistModal}
                     />
+                  ) : activeTab === "yt-playlists" ? (
+                    <YtPlaylistsView
+                      ytPlaylists={ytPlaylists}
+                      onSelectPlaylist={(id) => setActiveTab(`yt:${id}`)}
+                    />
+                  ) : ytPlaylistLoading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                      <div className="relative w-14 h-14 -translate-y-5">
+                        <div className="absolute inset-0 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
+                        <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
+                      </div>
+                      <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
+                        Loading Playlist...
+                      </p>
+                    </div>
                   ) : (
                     <LibraryView
                       activeTab={activeTab}

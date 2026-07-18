@@ -1,5 +1,6 @@
 use serde_json::Value;
 use std::sync::Mutex;
+use sha1::{Sha1, Digest};
 
 // Global storage for YouTube visitor/session token
 static VISITOR_DATA: Mutex<String> = Mutex::new(String::new());
@@ -33,6 +34,42 @@ fn get_cookie_header() -> Option<String> {
         }
     }
     None
+}
+
+/// Extract SAPISID value from cookie string
+fn extract_sapisid(cookie: &str) -> Option<String> {
+    // Prefer __Secure-3PAPISID, then SAPISID
+    for key in &["__Secure-3PAPISID", "SAPISID"] {
+        for part in cookie.split(';') {
+            let part = part.trim();
+            if let Some(rest) = part.strip_prefix(key) {
+                if let Some(val) = rest.strip_prefix('=') {
+                    let v = val.trim().to_string();
+                    if !v.is_empty() {
+                        return Some(v);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Compute SAPISIDHASH authorization header value.
+/// YouTube Music requires this for all authenticated InnerTube requests.
+/// Format: SAPISIDHASH <timestamp>_<SHA1("<timestamp> <sapisid> https://music.youtube.com")>
+fn build_sapisid_hash(cookie: &str) -> Option<String> {
+    let sapisid = extract_sapisid(cookie)?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let input = format!("{} {} https://music.youtube.com", ts, sapisid);
+    let mut hasher = Sha1::new();
+    hasher.update(input.as_bytes());
+    let result = hasher.finalize();
+    let hex = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+    Some(format!("SAPISIDHASH {}_{}", ts, hex))
 }
 
 fn extract_artist_from_runs(runs: &Vec<Value>) -> String {
@@ -826,19 +863,8 @@ async fn get_yt_artist(browse_id: String) -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-#[tauri::command]
-async fn get_yt_user_playlists() -> Result<Vec<Value>, String> {
-    println!("get_yt_user_playlists: fetching user playlists");
-
-    let cookie = match get_cookie_header() {
-        Some(c) => c,
-        None => return Err("No auth cookie set. Please add your cookie in Settings.".to_string()),
-    };
-
+async fn get_yt_explore() -> Result<Vec<Value>, String> {
+    println!("get_yt_explore: fetching new releases / community playlists");
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
@@ -853,109 +879,394 @@ async fn get_yt_user_playlists() -> Result<Vec<Value>, String> {
                 "gl": "US"
             }
         },
-        "browseId": "FEmusic_liked_playlists"
+        "browseId": "FEmusic_new_releases"
     });
 
-    let res = client
+    let mut req = client
         .post("https://music.youtube.com/youtubei/v1/browse")
         .json(&payload)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
-        .header("Content-Type", "application/json")
-        .header("Cookie", cookie)
-        .header("X-Goog-AuthUser", "0")
-        .header("Origin", "https://music.youtube.com")
-        .send()
-        .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .header("Content-Type", "application/json");
+    if let Some(cookie) = get_cookie_header() {
+        req = req.header("Cookie", cookie);
+    }
 
-    let data = res.json::<Value>().await
-        .map_err(|e| format!("Failed to parse response: {}", e))?;
+    let res = req.send().await.map_err(|e| format!("Explore request failed: {}", e))?;
+    let data = res.json::<Value>().await.map_err(|e| format!("Failed to parse explore response: {}", e))?;
 
-    // Parse grid items from the response
     let mut playlists: Vec<Value> = Vec::new();
 
-    // Try singleColumnBrowseResultsRenderer path
-    let items_path = data
-        .pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/gridRenderer/items")
-        .or_else(|| data.pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicShelfRenderer/contents"));
+    // Walk all sectionListRenderer contents sections
+    let sections = data
+        .pointer("/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents")
+        .or_else(|| data.pointer("/contents/twoColumnBrowseResultsRenderer/secondaryContents/sectionListRenderer/contents"))
+        .and_then(|v| v.as_array());
 
-    if let Some(items) = items_path.and_then(|v| v.as_array()) {
-        for item in items {
-            // Try musicTwoRowItemRenderer (grid card)
-            if let Some(renderer) = item.get("musicTwoRowItemRenderer") {
-                let title = renderer
-                    .pointer("/title/runs/0/text")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+    if let Some(sections) = sections {
+        for section in sections {
+            // Try gridRenderer items
+            let items = section
+                .pointer("/gridRenderer/items")
+                .or_else(|| section.pointer("/musicCarouselShelfRenderer/contents"))
+                .or_else(|| section.pointer("/musicShelfRenderer/contents"))
+                .and_then(|v| v.as_array());
 
-                let browse_id = renderer
-                    .pointer("/navigationEndpoint/browseEndpoint/browseId")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+            if let Some(items) = items {
+                for item in items {
+                    let renderer = item.get("musicTwoRowItemRenderer")
+                        .or_else(|| item.get("gridRenderer"));
 
-                let thumbnail = renderer
-                    .pointer("/thumbnailRenderer/musicThumbnailRenderer/thumbnail/thumbnails")
-                    .and_then(|v| v.as_array())
-                    .and_then(|arr| arr.last())
-                    .and_then(|t| t.get("url"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+                    if let Some(renderer) = renderer {
+                        let title = renderer
+                            .pointer("/title/runs/0/text")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
 
-                let subtitle = renderer
-                    .pointer("/subtitle/runs/0/text")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+                        let browse_id = renderer
+                            .pointer("/navigationEndpoint/browseEndpoint/browseId")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
 
-                if !browse_id.is_empty() && !title.is_empty() && browse_id != "VLLM" {
-                    playlists.push(serde_json::json!({
-                        "id": browse_id,
-                        "title": title,
-                        "thumbnail": thumbnail,
-                        "subtitle": subtitle
-                    }));
-                }
-            }
-            // Try musicResponsiveListItemRenderer (list view)
-            else if let Some(renderer) = item.get("musicResponsiveListItemRenderer") {
-                let title = renderer
-                    .pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer/text/runs/0/text")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+                        let thumbnail = renderer
+                            .pointer("/thumbnailRenderer/musicThumbnailRenderer/thumbnail/thumbnails")
+                            .and_then(|v| v.as_array())
+                            .and_then(|arr| arr.last())
+                            .and_then(|t| t.get("url"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
 
-                let browse_id = renderer
-                    .pointer("/navigationEndpoint/browseEndpoint/browseId")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+                        let subtitle = renderer
+                            .pointer("/subtitle/runs/0/text")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
 
-                let thumbnail = renderer
-                    .pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails")
-                    .and_then(|v| v.as_array())
-                    .and_then(|arr| arr.last())
-                    .and_then(|t| t.get("url"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
-
-                if !browse_id.is_empty() && !title.is_empty() {
-                    playlists.push(serde_json::json!({
-                        "id": browse_id,
-                        "title": title,
-                        "thumbnail": thumbnail,
-                        "subtitle": ""
-                    }));
+                        if !title.is_empty() && !browse_id.is_empty() {
+                            playlists.push(serde_json::json!({
+                                "id": browse_id,
+                                "title": title,
+                                "thumbnail": thumbnail,
+                                "subtitle": subtitle
+                            }));
+                        }
+                    }
                 }
             }
         }
     }
 
-    println!("get_yt_user_playlists: found {} playlists", playlists.len());
+    // Cap at 20 items
+    playlists.truncate(20);
+    println!("get_yt_explore: found {} items", playlists.len());
     Ok(playlists)
+}
+
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+async fn get_yt_user_playlists() -> Result<Vec<Value>, String> {
+    println!("get_yt_user_playlists: fetching user playlists");
+
+    let cookie = match get_cookie_header() {
+        Some(c) => c,
+        None => return Err("No auth cookie set. Please add your cookie in Settings.".to_string()),
+    };
+
+    // Build SAPISIDHASH — required for authenticated YTM InnerTube requests
+    let sapisid_hash = build_sapisid_hash(&cookie);
+    println!("get_yt_user_playlists: sapisid_hash present = {}", sapisid_hash.is_some());
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // Helper closure to make an authenticated YTM browse request
+    let make_request = |browse_id: &str| {
+        let payload = serde_json::json!({
+            "context": {
+                "client": {
+                    "clientName": "WEB_REMIX",
+                    "clientVersion": "1.20260114.03.00",
+                    "hl": "en",
+                    "gl": "US",
+                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0,gzip(gfe)"
+                }
+            },
+            "browseId": browse_id
+        });
+        payload
+    };
+
+    let mut all_playlists: Vec<Value> = Vec::new();
+
+    // Try both browse endpoints — liked_playlists is primary, library_landing is fallback
+    for browse_id in &["FEmusic_liked_playlists", "FEmusic_library_landing"] {
+        let payload = make_request(browse_id);
+
+        let mut req = client
+            .post("https://music.youtube.com/youtubei/v1/browse")
+            .query(&[("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-NKNELL6OA")])
+            .json(&payload)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+            .header("Content-Type", "application/json")
+            .header("Cookie", &cookie)
+            .header("X-Goog-AuthUser", "0")
+            .header("X-Origin", "https://music.youtube.com")
+            .header("Origin", "https://music.youtube.com")
+            .header("Referer", "https://music.youtube.com/")
+            .header("x-youtube-client-name", "67")
+            .header("x-youtube-client-version", "1.20260114.03.00");
+
+        if let Some(ref hash) = sapisid_hash {
+            req = req.header("Authorization", hash);
+        }
+
+        let res = match req.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                println!("get_yt_user_playlists: request failed for {}: {}", browse_id, e);
+                continue;
+            }
+        };
+
+        let status = res.status();
+        println!("get_yt_user_playlists: HTTP {} for browse {}", status, browse_id);
+
+        let data: Value = match res.json().await {
+            Ok(d) => d,
+            Err(e) => {
+                println!("get_yt_user_playlists: JSON parse error: {}", e);
+                continue;
+            }
+        };
+
+        // Print top-level and contents keys for diagnostics
+        println!("get_yt_user_playlists: top keys = {:?}",
+            data.as_object().map(|m| m.keys().collect::<Vec<_>>()));
+        if let Some(c) = data.get("contents") {
+            println!("get_yt_user_playlists: contents keys = {:?}",
+                c.as_object().map(|m| m.keys().collect::<Vec<_>>()));
+        }
+
+        // Exhaustive set of known InnerTube path prefixes for playlist grids/shelves
+        let candidate_paths: &[&str] = &[
+            // singleColumn paths
+            "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/gridRenderer/items",
+            "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicShelfRenderer/contents",
+            "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicPlaylistShelfRenderer/contents",
+            "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicCarouselShelfRenderer/contents",
+            // Try second section index too
+            "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/1/gridRenderer/items",
+            "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/1/musicShelfRenderer/contents",
+            // twoColumn paths
+            "/contents/twoColumnBrowseResultsRenderer/primaryContents/sectionListRenderer/contents/0/gridRenderer/items",
+            "/contents/twoColumnBrowseResultsRenderer/primaryContents/sectionListRenderer/contents/0/musicShelfRenderer/contents",
+            "/contents/twoColumnBrowseResultsRenderer/secondaryContents/sectionListRenderer/contents/0/gridRenderer/items",
+        ];
+
+        let mut found_items = false;
+        for path in candidate_paths {
+            if let Some(items) = data.pointer(path).and_then(|v| v.as_array()) {
+                println!("get_yt_user_playlists: found {} items at path: {}", items.len(), path);
+                found_items = true;
+                for item in items {
+                    if let Some(pl) = parse_playlist_item(item) {
+                        if !all_playlists.iter().any(|p| p["id"] == pl["id"]) {
+                            all_playlists.push(pl);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        if !found_items {
+            // Print the first 1000 chars of the raw response for debugging
+            let raw = serde_json::to_string(&data).unwrap_or_default();
+            println!("get_yt_user_playlists: no items found. Raw snippet: {}", &raw[..raw.len().min(2000)]);
+        }
+
+        if !all_playlists.is_empty() {
+            break; // Stop if first endpoint succeeded
+        }
+    }
+
+    println!("get_yt_user_playlists: found {} playlists total", all_playlists.len());
+    Ok(all_playlists)
+}
+
+/// Parse a single playlist item from either musicTwoRowItemRenderer or musicResponsiveListItemRenderer
+fn parse_playlist_item(item: &Value) -> Option<Value> {
+    // musicTwoRowItemRenderer (grid card — most common for playlists)
+    if let Some(renderer) = item.get("musicTwoRowItemRenderer") {
+        let title = renderer
+            .pointer("/title/runs/0/text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let browse_id = renderer
+            .pointer("/navigationEndpoint/browseEndpoint/browseId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let thumbnail = renderer
+            .pointer("/thumbnailRenderer/musicThumbnailRenderer/thumbnail/thumbnails")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.last())
+            .and_then(|t| t.get("url"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let subtitle = renderer
+            .pointer("/subtitle/runs/0/text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if !browse_id.is_empty() && !title.is_empty() && browse_id != "VLLM" {
+            return Some(serde_json::json!({
+                "id": browse_id,
+                "title": title,
+                "thumbnail": thumbnail,
+                "subtitle": subtitle
+            }));
+        }
+    }
+    // musicResponsiveListItemRenderer (list view)
+    if let Some(renderer) = item.get("musicResponsiveListItemRenderer") {
+        let title = renderer
+            .pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer/text/runs/0/text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let browse_id = renderer
+            .pointer("/navigationEndpoint/browseEndpoint/browseId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let thumbnail = renderer
+            .pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.last())
+            .and_then(|t| t.get("url"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if !browse_id.is_empty() && !title.is_empty() {
+            return Some(serde_json::json!({
+                "id": browse_id,
+                "title": title,
+                "thumbnail": thumbnail,
+                "subtitle": ""
+            }));
+        }
+    }
+    None
+}
+
+#[tauri::command]
+async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String> {
+    println!("get_yt_playlist_tracks: browse_id = {}", browse_id);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // Ensure browseId starts with VL (YTM playlist convention)
+    let effective_id = if browse_id.starts_with("VL") {
+        browse_id.clone()
+    } else {
+        format!("VL{}", browse_id)
+    };
+
+    let payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US",
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0,gzip(gfe)"
+            }
+        },
+        "browseId": effective_id
+    });
+
+    let mut req = client
+        .post("https://music.youtube.com/youtubei/v1/browse")
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json")
+        .header("X-Origin", "https://music.youtube.com")
+        .header("Origin", "https://music.youtube.com")
+        .header("Referer", "https://music.youtube.com/")
+        .header("x-youtube-client-name", "67")
+        .header("x-youtube-client-version", "1.20260114.03.00")
+        .header("X-Goog-AuthUser", "0");
+
+    // Add cookie + SAPISIDHASH if authenticated
+    if let Some(cookie) = get_cookie_header() {
+        if let Some(hash) = build_sapisid_hash(&cookie) {
+            req = req.header("Authorization", hash);
+        }
+        req = req.header("Cookie", cookie);
+    }
+
+    let res = req.send().await
+        .map_err(|e| format!("Playlist browse request failed: {}", e))?;
+
+    let status = res.status();
+    println!("get_yt_playlist_tracks: HTTP {}", status);
+
+    let data: Value = res.json().await
+        .map_err(|e| format!("Failed to parse playlist response: {}", e))?;
+
+    let mut tracks: Vec<Value> = Vec::new();
+
+    // YTM playlist tracks live in musicShelfRenderer or musicPlaylistShelfRenderer
+    // Primary path: singleColumnBrowseResultsRenderer → musicShelfRenderer
+    let shelf_paths: &[&str] = &[
+        "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicShelfRenderer/contents",
+        "/contents/singleColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/musicPlaylistShelfRenderer/contents",
+        "/contents/twoColumnBrowseResultsRenderer/secondaryContents/musicShelfRenderer/contents",
+        "/contents/twoColumnBrowseResultsRenderer/secondaryContents/sectionListRenderer/contents/0/musicShelfRenderer/contents",
+        "/contents/twoColumnBrowseResultsRenderer/secondaryContents/sectionListRenderer/contents/0/musicPlaylistShelfRenderer/contents",
+    ];
+
+    for path in shelf_paths {
+        if let Some(items) = data.pointer(path).and_then(|v| v.as_array()) {
+            println!("get_yt_playlist_tracks: found {} items at {}", items.len(), path);
+            for item in items {
+                let renderer = item.get("musicResponsiveListItemRenderer")
+                    .or_else(|| item.get("musicTwoRowItemRenderer"));
+                if let Some(r) = renderer {
+                    if let Some(track) = extract_track_from_renderer(r) {
+                        tracks.push(track);
+                    }
+                }
+            }
+            if !tracks.is_empty() {
+                break;
+            }
+        }
+    }
+
+    if tracks.is_empty() {
+        let raw = serde_json::to_string(&data).unwrap_or_default();
+        println!("get_yt_playlist_tracks: no tracks found. top keys = {:?}",
+            data.as_object().map(|m| m.keys().collect::<Vec<_>>()));
+        println!("get_yt_playlist_tracks: raw snippet: {}", &raw[..raw.len().min(1500)]);
+    }
+
+    println!("get_yt_playlist_tracks: returning {} tracks", tracks.len());
+    Ok(tracks)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -967,10 +1278,12 @@ pub fn run() {
             set_auth_token,
             get_auth_token,
             get_yt_home,
+            get_yt_explore,
             search_yt_direct,
             get_yt_stream_direct,
             get_yt_artist,
-            get_yt_user_playlists
+            get_yt_user_playlists,
+            get_yt_playlist_tracks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
