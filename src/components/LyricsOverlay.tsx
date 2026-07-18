@@ -146,7 +146,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   const activeLyricIndex = useMemo(() => {
     if (parsedLyrics.type !== "synced") return -1;
 
-    // Snappy lead time offset (approx. 400ms) to ensure highlighted words align with vocal start
+    // Compensate for reading/vocal latency by leading by 400ms
     const LYRIC_OFFSET = 0.4;
     const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
@@ -229,20 +229,16 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       >
                         {line.words.map((word, wIdx) => {
                           const nextWord = line.words![wIdx + 1];
-                          const wordEndTime = nextWord ? nextWord.time : (parsedLyrics.lines[idx + 1]?.time ?? (audioRef.current?.duration || word.time + 3));
-                          const wordDuration = Math.max(wordEndTime - word.time, 0.1);
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - word.time) / wordDuration));
-                          const fillPercent = wordProgress * 100;
+                          const isWordActive = adjustedProgress >= word.time && (!nextWord || adjustedProgress < nextWord.time);
 
                           return (
                             <span
                               key={wIdx}
-                              style={{
-                                background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                display: "inline-block",
-                              }}
+                              className={`transition-colors duration-150 ${
+                                isWordActive
+                                  ? "text-[#6366f1] scale-[1.02]"
+                                  : "text-white/45"
+                              }`}
                             >
                               {word.text}
                             </span>
@@ -256,11 +252,11 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                     const nextLine = parsedLyrics.lines[idx + 1];
                     const lineGap = nextLine ? nextLine.time - line.time : 8.0;
                     
-                    // Distribute words over an estimated singing duration to avoid slow sweeps in silent gaps
                     const wordDuration = 0.35; // 350ms average singing duration per word
                     const estimatedVocalDuration = words.length * wordDuration + 0.3;
                     const activeDuration = Math.min(lineGap, estimatedVocalDuration);
                     const adjustedWordDuration = activeDuration / Math.max(words.length, 1);
+                    const activeWordIdx = Math.floor((adjustedProgress - line.time) / adjustedWordDuration);
 
                     return (
                       <p
@@ -269,19 +265,16 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                         className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
                       >
                         {words.map((word, wIdx) => {
-                          const wordStartTime = line.time + wIdx * adjustedWordDuration;
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / adjustedWordDuration));
-                          const fillPercent = wordProgress * 100;
+                          const isWordActive = wIdx === activeWordIdx;
 
                           return (
                             <span
                               key={wIdx}
-                              style={{
-                                background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                display: "inline-block",
-                              }}
+                              className={`transition-colors duration-150 ${
+                                isWordActive
+                                  ? "text-[#6366f1] scale-[1.02]"
+                                  : "text-white/45"
+                              }`}
                             >
                               {word}
                             </span>
