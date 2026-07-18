@@ -151,9 +151,6 @@ export default function App() {
     if (activeTab === "recently-played") {
       return recentlyPlayed;
     }
-    if (activeTab === "downloads") {
-      return downloads;
-    }
     if (activeTab === "search") {
       return searchResults.filter((item): item is Track => !("type" in item && item.type === "artist"));
     }
