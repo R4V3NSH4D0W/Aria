@@ -2,6 +2,17 @@ import React, { useEffect, useState, useMemo } from "react";
 import { X, Loader2, FileText } from "lucide-react";
 import { Track } from "../types";
 
+interface Word {
+  text: string;
+  time: number;
+}
+
+interface SyncedLine {
+  time: number;
+  text: string;
+  words?: Word[];
+}
+
 interface LyricsOverlayProps {
   show: boolean;
   onClose: () => void;
@@ -26,7 +37,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     if (!lyrics) return { type: "plain" as const, lines: "" };
 
     const lines = lyrics.split("\n");
-    const parsedLines: { time: number; text: string }[] = [];
+    const parsedLines: SyncedLine[] = [];
     const timeRegex = /^\[(\d+):(\d+)(?:\.(\d+))?\](.*)/;
     let isSynced = false;
 
@@ -41,7 +52,37 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
         const time = minutes * 60 + seconds + milliseconds / 1000;
         const text = match[4].trim();
-        parsedLines.push({ time, text });
+
+        // Parse Enhanced LRC word timestamps like <00:12.30> word
+        const wordRegex = /<(\d+):(\d+)(?:\.(\d+))?>([^<]*)/g;
+        const words: Word[] = [];
+        let wordMatch;
+        let cleanText = "";
+
+        while ((wordMatch = wordRegex.exec(text)) !== null) {
+          const wMin = parseInt(wordMatch[1], 10);
+          const wSec = parseInt(wordMatch[2], 10);
+          const wMsStr = wordMatch[3] || "0";
+          const wMs = parseInt(wMsStr.padEnd(3, "0").slice(0, 3), 10);
+          const wTime = wMin * 60 + wSec + wMs / 1000;
+          const wText = wordMatch[4].trim();
+
+          if (wText) {
+            words.push({ text: wText, time: wTime });
+            cleanText += (cleanText ? " " : "") + wText;
+          }
+        }
+
+        // If no word tags are found, use the plain text
+        if (words.length === 0) {
+          cleanText = text;
+        }
+
+        parsedLines.push({
+          time,
+          text: cleanText,
+          words: words.length > 0 ? words : undefined,
+        });
       } else {
         const text = line.trim();
         if (text) {
@@ -103,7 +144,6 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
         if (adjustedProgress < line.time + activeDuration) {
           activeIdx = i;
         } else {
-          // If we are in the gap between lines, clear the active highlight
           activeIdx = -1;
         }
       } else {
@@ -124,6 +164,9 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   }, [activeLyricIndex, show]);
 
   if (!show) return null;
+
+  const LYRIC_OFFSET = 0.3;
+  const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
   return (
     <div className="fixed inset-0 z-40 bg-[#07080a]/85 backdrop-blur-3xl flex flex-col animate-fade-in pb-28">
@@ -167,15 +210,72 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
               {parsedLyrics.lines.map((line, idx) => {
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
-                  return (
-                    <p
-                      key={idx}
-                      id={`lyric-line-${idx}`}
-                      className="text-center text-3xl sm:text-4xl lg:text-5xl font-black text-white scale-[1.02] transition-all duration-300 origin-center drop-shadow-[0_0_18px_rgba(255,255,255,0.55)] opacity-100 leading-normal"
-                    >
-                      {line.text}
-                    </p>
-                  );
+                  if (line.words) {
+                    // 1. High-precision syllable/word timing if available
+                    return (
+                      <p
+                        key={idx}
+                        id={`lyric-line-${idx}`}
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                      >
+                        {line.words.map((word, wIdx) => {
+                          const nextWord = line.words![wIdx + 1];
+                          const isWordActive = adjustedProgress >= word.time && (!nextWord || adjustedProgress < nextWord.time);
+                          const isWordPast = adjustedProgress >= word.time;
+
+                          return (
+                            <span
+                              key={wIdx}
+                              className={`transition-all duration-150 ${
+                                isWordActive
+                                  ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
+                                  : isWordPast
+                                  ? "text-white opacity-90"
+                                  : "text-white/45"
+                              }`}
+                            >
+                              {word.text}
+                            </span>
+                          );
+                        })}
+                      </p>
+                    );
+                  } else {
+                    // 2. Even fallback distribution if only line-level timing is available
+                    const words = line.text.split(/\s+/);
+                    const nextLine = parsedLyrics.lines[idx + 1];
+                    const lineDuration = Math.max((nextLine?.time ?? (audioRef.current?.duration || line.time + 5)) - line.time, 0.5);
+                    const wordDuration = lineDuration / Math.max(words.length, 1);
+                    const activeWordIdx = Math.floor((adjustedProgress - line.time) / wordDuration);
+
+                    return (
+                      <p
+                        key={idx}
+                        id={`lyric-line-${idx}`}
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                      >
+                        {words.map((word, wIdx) => {
+                          const isWordActive = wIdx === activeWordIdx;
+                          const isWordPast = wIdx <= activeWordIdx;
+
+                          return (
+                            <span
+                              key={wIdx}
+                              className={`transition-all duration-150 ${
+                                isWordActive
+                                  ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
+                                  : isWordPast
+                                  ? "text-white opacity-90"
+                                  : "text-white/45"
+                              }`}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })}
+                      </p>
+                    );
+                  }
                 } else {
                   return (
                     <p
