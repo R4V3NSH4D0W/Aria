@@ -41,7 +41,7 @@ export const ArtistDetailsView: React.FC<ArtistDetailsViewProps> = ({
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col gap-6 select-none animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="flex-1 flex flex-col gap-6 pb-36 select-none animate-in fade-in slide-in-from-bottom-4 duration-300">
       {/* Header Back Navigation */}
       <div className="flex items-center gap-4">
         <button

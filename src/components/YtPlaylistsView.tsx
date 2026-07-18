@@ -12,7 +12,7 @@ export const YtPlaylistsView: React.FC<YtPlaylistsViewProps> = ({
   onSelectPlaylist,
 }) => {
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 p-6 lg:p-8 pb-36 lg:pb-36 overflow-y-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
