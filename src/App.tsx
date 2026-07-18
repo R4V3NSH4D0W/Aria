@@ -21,7 +21,7 @@ import { useEffect, useState } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 
 export default function App() {
-  const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "");
+  const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "https://w.wallhaven.cc/full/gw/wallhaven-gwmj9l.png");
   const [wallpaperOpacity, setWallpaperOpacity] = useState(() => {
     const saved = localStorage.getItem("aria_wallpaper_opacity");
     return saved ? parseFloat(saved) : 0.3;

@@ -63,7 +63,7 @@ fn build_sapisid_hash(cookie: &str) -> Option<String> {
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
-        .as_secs();
+        .as_millis();
     let input = format!("{} {} https://music.youtube.com", ts, sapisid);
     let mut hasher = Sha1::new();
     hasher.update(input.as_bytes());

@@ -37,29 +37,24 @@ type Tab = "account" | "appearance";
 const PRESETS = [
   { name: "None", url: "", preview: null },
   {
-    name: "Nebula",
-    url: "https://images.unsplash.com/photo-1538370965046-79c0d6907d47?q=80&w=600",
-    preview: "from-indigo-900 via-purple-900 to-slate-900",
+    name: "Cozy Room",
+    url: "https://w.wallhaven.cc/full/gw/wallhaven-gwmj9l.png",
+    preview: "from-amber-950 via-neutral-900 to-black",
   },
   {
-    name: "Aurora",
-    url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=600",
-    preview: "from-teal-900 via-indigo-900 to-slate-900",
+    name: "Cyber Street",
+    url: "https://w.wallhaven.cc/full/7j/wallhaven-7jew29.png",
+    preview: "from-indigo-950 via-purple-950 to-black",
   },
   {
-    name: "Obsidian",
-    url: "https://images.unsplash.com/photo-1507608869274-d3177c8bb4c7?q=80&w=600",
+    name: "Scenic Cliff",
+    url: "https://w.wallhaven.cc/full/zp/wallhaven-zpdogo.jpg",
     preview: "from-slate-900 via-zinc-900 to-black",
   },
   {
-    name: "Cosmos",
-    url: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=600",
+    name: "Anime Sky",
+    url: "https://w.wallhaven.cc/full/6l/wallhaven-6lpkl7.jpg",
     preview: "from-blue-950 via-indigo-950 to-black",
-  },
-  {
-    name: "Forest",
-    url: "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=600",
-    preview: "from-emerald-950 via-green-950 to-slate-900",
   },
 ];
 
@@ -493,12 +488,15 @@ export const Settings: React.FC<SettingsProps> = ({
                           <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors" />
                           {/* Label */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                            {isActive && (
-                              <CheckCircle2 className="w-4 h-4 text-indigo-400" />
+                            {isActive ? (
+                              <CheckCircle2 className="w-5 h-5 text-indigo-400 drop-shadow-lg" />
+                            ) : (
+                              !preset.url && (
+                                <span className="relative z-10 text-[11px] font-semibold text-slate-300">
+                                  {preset.name}
+                                </span>
+                              )
                             )}
-                            <span className={`relative z-10 text-[11px] font-semibold ${isActive ? "text-indigo-300" : "text-slate-300"}`}>
-                              {preset.name}
-                            </span>
                           </div>
                         </button>
                       );
