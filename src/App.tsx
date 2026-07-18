@@ -82,6 +82,12 @@ export default function App() {
     setSavedRadios((prev) => prev.filter((r) => r.id !== radioId));
   };
 
+  const renameSavedRadio = (radioId: string, newTitle: string) => {
+    setSavedRadios((prev) =>
+      prev.map((r) => (r.id === radioId ? { ...r, title: newTitle } : r))
+    );
+  };
+
   // Automatically minimize sidebar on small viewports, maximize on desktops
   useEffect(() => {
     const media = window.matchMedia("(max-width: 640px)");
@@ -434,6 +440,7 @@ export default function App() {
                       savedRadios={savedRadios}
                       onSelectRadio={(id) => setActiveTab(`yt:${id}`)}
                       onDeleteRadio={deleteSavedRadio}
+                      onRenameRadio={renameSavedRadio}
                     />
                   ) : ytPlaylistLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">

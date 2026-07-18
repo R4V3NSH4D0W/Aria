@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Radio, Play, Trash2, PlusCircle } from "lucide-react";
+import { Radio, Play, Trash2, PlusCircle, Edit2 } from "lucide-react";
 import { SavedRadio } from "../types";
 
 interface YtRadiosViewProps {
   savedRadios: SavedRadio[];
   onSelectRadio: (radioId: string) => void;
   onDeleteRadio: (radioId: string, e: React.MouseEvent) => void;
+  onRenameRadio: (radioId: string, newTitle: string) => void;
 }
 
 function parseYoutubeUrl(url: string): { videoId?: string; playlistId?: string } | null {
@@ -44,9 +45,12 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
   savedRadios,
   onSelectRadio,
   onDeleteRadio,
+  onRenameRadio,
 }) => {
   const [urlInput, setUrlInput] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [editingRadioId, setEditingRadioId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState("");
 
   const handleAddRadio = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +69,13 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
     } else {
       setErrorMsg("Invalid YouTube link. Please paste a valid track or mix URL.");
     }
+  };
+
+  const handleSaveRename = (radioId: string) => {
+    if (renameText.trim()) {
+      onRenameRadio(radioId, renameText.trim());
+    }
+    setEditingRadioId(null);
   };
 
   return (
@@ -143,23 +154,54 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
                   </div>
                 </div>
 
-                {/* Delete Button (Upper Right) */}
-                <button
-                  onClick={(e) => onDeleteRadio(radio.id, e)}
-                  className="absolute top-2.5 right-2.5 p-2 rounded-lg bg-black/60 hover:bg-red-500/80 text-slate-300 hover:text-white border border-white/5 transition-all duration-350 opacity-0 group-hover:opacity-100 z-10"
-                  title="Remove Radio"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {/* Actions Overlay (Upper Right) */}
+                <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingRadioId(radio.id);
+                      setRenameText(radio.title);
+                    }}
+                    className="p-2 rounded-lg bg-black/60 hover:bg-violet-600/80 text-slate-300 hover:text-white border border-white/5 transition-all duration-300"
+                    title="Rename Radio"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => onDeleteRadio(radio.id, e)}
+                    className="p-2 rounded-lg bg-black/60 hover:bg-red-500/80 text-slate-300 hover:text-white border border-white/5 transition-all duration-300"
+                    title="Remove Radio"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               {/* Title & Tracks count */}
-              <h3 className="font-bold text-sm text-slate-100 truncate group-hover:text-white mb-1">
-                {radio.title}
-              </h3>
-              <p className="text-xs text-slate-400 truncate">
-                YouTube Music Radio
-              </p>
+              <div className="min-h-[38px] flex flex-col justify-start">
+                {editingRadioId === radio.id ? (
+                  <input
+                    type="text"
+                    value={renameText}
+                    onChange={(e) => setRenameText(e.target.value)}
+                    onBlur={() => handleSaveRename(radio.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveRename(radio.id);
+                      if (e.key === "Escape") setEditingRadioId(null);
+                    }}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()} // Prevent card navigation click
+                    className="w-full px-2 py-1 text-xs rounded bg-white/10 border border-white/20 text-white font-semibold focus:outline-none focus:border-violet-500"
+                  />
+                ) : (
+                  <h3 className="font-bold text-sm text-slate-100 truncate group-hover:text-white mb-1">
+                    {radio.title}
+                  </h3>
+                )}
+                <p className="text-xs text-slate-400 truncate">
+                  YouTube Music Radio
+                </p>
+              </div>
             </div>
           ))}
         </div>
