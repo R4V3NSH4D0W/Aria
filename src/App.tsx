@@ -360,6 +360,7 @@ export default function App() {
             toggleSidebar={() => setIsSidebarOpen((open) => !open)}
             onOpenSettings={() => setActiveTab("settings")}
             ytPlaylists={ytPlaylists}
+            savedRadios={savedRadios}
           />
 
           <div

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search, Heart, ListMusic, History, Settings, Menu } from "lucide-react";
-import { Playlist } from "../types";
+import { Playlist, SavedRadio } from "../types";
 
 interface HeaderProps {
   activeTab: string;
@@ -14,6 +14,7 @@ interface HeaderProps {
   toggleSidebar: () => void;
   onOpenSettings: () => void;
   ytPlaylists: { id: string; title: string }[];
+  savedRadios?: SavedRadio[];
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   toggleSidebar,
   onOpenSettings,
   ytPlaylists,
+  savedRadios = [],
 }) => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
@@ -97,7 +99,12 @@ export const Header: React.FC<HeaderProps> = ({
               ) : activeTab.startsWith("yt:") ? (
                 <>
                   <ListMusic className="w-7 h-7 text-violet-400" />
-                  <span>{ytPlaylists.find((p) => p.id === activeTab.slice(3))?.title || "YouTube Playlist"}</span>
+                  <span>
+                    {activeTab.startsWith("yt:RD")
+                      ? (savedRadios.find((r) => r.id === activeTab.slice(3))?.title || "YouTube Radio")
+                      : (ytPlaylists.find((p) => p.id === activeTab.slice(3))?.title || "YouTube Playlist")
+                    }
+                  </span>
                 </>
               ) : (
                 <>
