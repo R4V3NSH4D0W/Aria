@@ -13,7 +13,7 @@ export const ArtistItem: React.FC<ArtistItemProps> = ({ artist, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="group flex items-center justify-between p-3.5 rounded-2xl border border-white/5 bg-[#0e1015] hover:bg-[#12151c] text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg hover:border-indigo-500/20"
+      className="group flex items-center justify-between p-3.5 rounded-2xl border border-white/5 bg-[#0e1015]/40 hover:bg-[#12151c]/60 backdrop-blur-sm text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg hover:border-indigo-500/20"
     >
       <div className="flex items-center gap-4 min-w-0">
         {/* Circular Avatar */}

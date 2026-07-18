@@ -16,7 +16,7 @@ export const HomeSkeleton: React.FC = () => {
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="flex-none w-48 rounded-2xl border border-white/5 bg-[#0e1015] p-3 shadow-lg animate-pulse"
+              className="flex-none w-48 animate-pulse"
             >
               <div className="w-full aspect-square bg-white/5 rounded-xl mb-3" />
               <div className="h-4 w-3/4 bg-white/5 rounded-lg" />

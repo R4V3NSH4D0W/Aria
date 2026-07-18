@@ -72,7 +72,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
         {/* Favorites Card */}
         <button
           onClick={() => onOpenTab("favorites")}
-          className="flex-none w-48 rounded-2xl border border-white/5 bg-[#0e1015] p-3 text-left transition-all hover:bg-[#12151c] hover:border-white/10 hover:scale-[1.02] group shadow-lg cursor-pointer"
+          className="flex-none w-48 text-left transition-all hover:scale-[1.02] group cursor-pointer"
         >
           <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-md bg-linear-to-br from-pink-500/10 to-purple-500/5 mb-3 flex items-center justify-center border border-white/5">
             {renderCover(
@@ -95,7 +95,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
         {/* Recently Played Card */}
         <button
           onClick={() => onOpenTab("recently-played")}
-          className="flex-none w-48 rounded-2xl border border-white/5 bg-[#0e1015] p-3 text-left transition-all hover:bg-[#12151c] hover:border-white/10 hover:scale-[1.02] group shadow-lg cursor-pointer"
+          className="flex-none w-48 text-left transition-all hover:scale-[1.02] group cursor-pointer"
         >
           <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-md bg-linear-to-br from-sky-500/10 to-indigo-500/5 mb-3 flex items-center justify-center border border-white/5">
             {renderCover(
@@ -119,7 +119,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
           <button
             key={playlist.id}
             onClick={() => onOpenTab(playlist.id)}
-            className="flex-none w-48 rounded-2xl border border-white/5 bg-[#0e1015] p-3 text-left transition-all hover:bg-[#12151c] hover:border-white/10 hover:scale-[1.02] group shadow-lg cursor-pointer"
+            className="flex-none w-48 text-left transition-all hover:scale-[1.02] group cursor-pointer"
           >
             <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-md bg-linear-to-br from-emerald-500/10 to-teal-500/5 mb-3 flex items-center justify-center border border-white/5">
               {renderCover(

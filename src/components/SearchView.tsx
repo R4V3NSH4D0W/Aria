@@ -21,7 +21,7 @@ interface SearchViewProps {
   toggleFavorite: (track: Track) => void;
   isFavorite: (track: Track) => boolean;
   removeTrackFromPlaylist: (playlistId: string, videoId: string) => void;
-  setShowCreatePlaylistModal: (show: boolean) => void;
+  setShowCreatePlaylistModal: (show: any) => void;
 }
 
 export const SearchView: React.FC<SearchViewProps> = ({
@@ -59,9 +59,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
           <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
           <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
         </div>
-        <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
-          Searching YouTube Music...
-        </p>
       </div>
     );
   }

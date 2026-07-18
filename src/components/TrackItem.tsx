@@ -26,7 +26,7 @@ interface TrackItemProps {
   activeTab: string;
   removeTrackFromPlaylist: (playlistId: string, videoId: string) => void;
   playTrack: (track: Track) => void;
-  setShowCreatePlaylistModal: (show: boolean) => void;
+  setShowCreatePlaylistModal: (show: any) => void;
 }
 
 export const TrackItem: React.FC<TrackItemProps> = ({
@@ -49,6 +49,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({
     <div
       onClick={() => playTrack(track)}
       className={`group flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer ${
+        activeDropdownTrackId === track.videoId ? "relative z-30" : ""
+      } ${
         isCurrent
           ? "bg-[#161920]/80 border-indigo-500/30 text-white shadow-lg backdrop-blur-sm"
           : "bg-[#0e1015]/40 border-white/5 hover:bg-[#12151c]/60 backdrop-blur-sm text-slate-300"
@@ -142,7 +144,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({
               ))}
               <button
                 onClick={() => {
-                  setShowCreatePlaylistModal(true);
+                  setShowCreatePlaylistModal(track);
                   setActiveDropdownTrackId(null);
                 }}
                 className="w-full text-left px-4 py-2 text-xs text-indigo-400 hover:bg-white/5 hover:text-indigo-300 font-semibold border-t border-white/5 transition-all cursor-pointer"

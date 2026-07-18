@@ -61,7 +61,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   const isCurrent = (track: Track) => currentTrack?.videoId === track.videoId;
 
   return (
-    <aside className="hidden lg:flex lg:flex-col gap-4 bg-[#0e1015] border border-white/5 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.28)] sticky top-6 self-start max-h-[calc(100vh-11.5rem)]">
+    <aside className="hidden lg:flex lg:flex-col gap-4 bg-[#0e1015]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.28)] sticky top-6 self-start max-h-[calc(100vh-11.5rem)]">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -119,7 +119,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                 className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
                   current
                     ? "bg-white/8 border-indigo-500/25 text-white"
-                    : "bg-[#12151b] border-white/5 text-slate-300 hover:bg-white/5 hover:border-white/10"
+                    : "bg-[#12151b]/40 border-white/5 text-slate-300 hover:bg-white/5 hover:border-white/10 backdrop-blur-sm"
                 } ${draggedIndex === index ? "opacity-40" : ""} ${hoveredIndex === index && draggedIndex !== null ? "ring-1 ring-indigo-400/40" : ""}`}
               >
                 <span className="text-slate-500 hover:text-slate-300 shrink-0 cursor-grab">

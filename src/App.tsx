@@ -1,4 +1,4 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, WifiOff } from "lucide-react";
 import { Track } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -35,6 +35,7 @@ export default function App() {
     recentlyPlayed,
     activeTab,
     isSidebarOpen,
+    isOnline,
     showCreatePlaylistModal,
     newPlaylistName,
     activeDropdownTrackId,
@@ -237,6 +238,21 @@ export default function App() {
       />
 
       <div data-tauri-drag-region className="h-8 shrink-0 z-20" />
+
+      {!isOnline && (
+        <div className="mx-6 mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-inner z-20 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>You are offline. Reconnect to search and stream tracks.</span>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 transition-all cursor-pointer border border-amber-500/30"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden z-10">
         <Sidebar

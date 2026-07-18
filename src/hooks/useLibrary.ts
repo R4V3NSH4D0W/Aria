@@ -14,8 +14,22 @@ export function useLibrary() {
   const [activeTab, setActiveTab] = useState<string>("home");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [pendingTrackForPlaylist, setPendingTrackForPlaylist] = useState<Track | null>(null);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [activeDropdownTrackId, setActiveDropdownTrackId] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  const customSetShowCreatePlaylistModal = useCallback((show: boolean | Track) => {
+    if (typeof show === "boolean") {
+      setShowCreatePlaylistModal(show);
+      if (!show) {
+        setPendingTrackForPlaylist(null);
+      }
+    } else {
+      setPendingTrackForPlaylist(show);
+      setShowCreatePlaylistModal(true);
+    }
+  }, []);
 
   // Load playlists, favorites & YT session on start
   useEffect(() => {
@@ -44,6 +58,27 @@ export function useLibrary() {
     } catch (e) {
       console.error("Failed to load local storage data", e);
     }
+  }, []);
+
+  // Close track dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setActiveDropdownTrackId(null);
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   const savePlaylists = useCallback((updated: Playlist[]) => {
@@ -79,12 +114,13 @@ export function useLibrary() {
     const newPlaylist: Playlist = {
       id: Date.now().toString(),
       name: newPlaylistName,
-      tracks: [],
+      tracks: pendingTrackForPlaylist ? [pendingTrackForPlaylist] : [],
     };
     savePlaylists([...playlists, newPlaylist]);
     setNewPlaylistName("");
+    setPendingTrackForPlaylist(null);
     setShowCreatePlaylistModal(false);
-  }, [newPlaylistName, playlists, savePlaylists]);
+  }, [newPlaylistName, playlists, savePlaylists, pendingTrackForPlaylist]);
 
   const deletePlaylist = useCallback(
     (id: string, e: React.MouseEvent) => {
@@ -160,6 +196,7 @@ export function useLibrary() {
     recentlyPlayed,
     activeTab,
     isSidebarOpen,
+    isOnline,
     showCreatePlaylistModal,
     newPlaylistName,
     activeDropdownTrackId,
@@ -170,7 +207,7 @@ export function useLibrary() {
     setRecentlyPlayed,
     setActiveTab,
     setIsSidebarOpen,
-    setShowCreatePlaylistModal,
+    setShowCreatePlaylistModal: customSetShowCreatePlaylistModal,
     setNewPlaylistName,
     setActiveDropdownTrackId,
     savePlaylists,

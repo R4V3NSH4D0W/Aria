@@ -55,7 +55,7 @@ export const QuickPicks: React.FC<QuickPicksProps> = ({
             <div
               key={track.videoId}
               onClick={() => playSongs(tracks, false, track.videoId)}
-              className="flex items-center gap-3 p-3 rounded-2xl border border-white/5 bg-[#0e1015] hover:bg-[#12151c] hover:border-white/10 cursor-pointer group transition-all"
+              className="flex items-center gap-3 p-3 rounded-2xl border border-white/5 bg-[#0e1015]/40 hover:bg-[#12151c]/60 backdrop-blur-sm hover:border-white/10 cursor-pointer group transition-all"
             >
               <div className="w-12 h-12 rounded-lg overflow-hidden relative border border-white/5 bg-slate-800 shrink-0">
                 <img

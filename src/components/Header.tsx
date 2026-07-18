@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="p-6 sticky top-0 bg-[#08090a]/60 backdrop-blur-md border-b border-white/5 flex items-center justify-between gap-4 z-10">
+    <header className="p-6 sticky top-0 bg-[#08090a]/30 backdrop-blur-md border-b border-white/5 flex items-center justify-between gap-4 z-10">
       <div className="flex items-center gap-4 flex-1">
         {/* Toggle Button (Hidden on small screens, shown on medium/large screens) */}
         <button
@@ -112,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setSortMenuOpen((open) => !open)}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#12151b] px-3 py-2 text-sm font-medium text-slate-200 shadow-sm cursor-pointer transition-all hover:bg-white/5 hover:border-white/15"
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#12151b]/40 backdrop-blur-sm px-3 py-2 text-sm font-medium text-slate-200 shadow-sm cursor-pointer transition-all hover:bg-[#12151b]/60 hover:border-white/15"
                 >
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Sort
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {sortMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-2xl border border-white/10 bg-[#12151b] shadow-2xl z-20">
+                  <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-2xl border border-white/10 bg-[#12151b]/80 backdrop-blur-md shadow-2xl z-20">
                     {(
                       [
                         ["recent", "Recently added"],

@@ -37,7 +37,7 @@ export const YtPlaylistsView: React.FC<YtPlaylistsViewProps> = ({
             <div
               key={playlist.id}
               onClick={() => onSelectPlaylist(playlist.id)}
-              className="group relative bg-[#13161c]/40 hover:bg-white/[0.06] border border-white/5 hover:border-white/10 p-4 rounded-2xl transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-0.5 backdrop-blur-sm"
+              className="group relative transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
             >
               {/* Thumbnail Container */}
               <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-4 bg-slate-900 shadow-inner">
