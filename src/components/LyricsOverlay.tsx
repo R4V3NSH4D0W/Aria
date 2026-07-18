@@ -146,7 +146,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
           </div>
         ) : lyrics ? (
           parsedLyrics.type === "synced" ? (
-            <div className="max-w-3xl w-full flex flex-col gap-8 py-24 px-4 select-text">
+            <div className="max-w-5xl w-full flex flex-col gap-8 py-24 px-4 select-text">
               {parsedLyrics.lines.map((line, idx) => {
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
@@ -154,7 +154,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                     <p
                       key={idx}
                       id={`lyric-line-${idx}`}
-                      className="text-center text-3xl sm:text-4xl lg:text-5xl font-black text-white scale-[1.02] transition-all duration-300 origin-center drop-shadow-[0_0_18px_rgba(255,255,255,0.55)] opacity-100 leading-tight"
+                      className="text-center text-2xl sm:text-3xl lg:text-[2.5rem] font-black text-white scale-[1.01] transition-all duration-300 origin-center drop-shadow-[0_0_18px_rgba(255,255,255,0.55)] opacity-100 leading-normal"
                     >
                       {line.text}
                     </p>
@@ -164,7 +164,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                     <p
                       key={idx}
                       id={`lyric-line-${idx}`}
-                      className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-300 origin-center"
+                      className="text-center text-xl sm:text-2xl lg:text-[1.85rem] font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-300 origin-center leading-normal"
                     >
                       {line.text}
                     </p>
