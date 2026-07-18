@@ -66,10 +66,10 @@ export const Player: React.FC<PlayerProps> = ({
   }, []);
 
   return (
-    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-4 lg:px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up">
+    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-4 lg:px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up gap-4">
       {/* Left: Track Info */}
-      <div className="flex items-center gap-3 lg:gap-4 lg:w-1/4 lg:min-w-[200px] shrink-0">
-        <div className="w-14 h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5 bg-slate-800 shrink-0 group/thumb">
+      <div className="flex items-center gap-3 lg:gap-4 w-1/3 min-w-[160px] max-w-[280px] shrink-0">
+        <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5 bg-slate-800 shrink-0 group/thumb">
           <img src={currentTrack.thumbnail} alt={currentTrack.title} className="w-full h-full object-cover" />
           {currentTrack.isResolving ? (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
@@ -87,28 +87,28 @@ export const Player: React.FC<PlayerProps> = ({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="font-bold text-sm truncate text-white">{currentTrack.title}</h4>
-          <p className="text-xs text-slate-400 truncate mt-0.5">{currentTrack.uploaderName}</p>
+          <h4 className="font-bold text-xs lg:text-sm truncate text-white">{currentTrack.title}</h4>
+          <p className="text-[10px] lg:text-xs text-slate-400 truncate mt-0.5">{currentTrack.uploaderName}</p>
         </div>
         <button
           onClick={() => toggleFavorite(currentTrack)}
-          className={`p-2 rounded-lg transition-all shrink-0 cursor-pointer ${
+          className={`p-1.5 rounded-lg transition-all shrink-0 cursor-pointer ${
             isFavorite(currentTrack) 
               ? "text-pink-500 hover:text-pink-400" 
               : "text-slate-500 hover:text-slate-300"
           }`}
         >
-          <Heart className={`w-4.5 h-4.5 ${isFavorite(currentTrack) ? "fill-pink-500" : ""}`} />
+          <Heart className={`w-4 h-4 lg:w-4.5 lg:h-4.5 ${isFavorite(currentTrack) ? "fill-pink-500" : ""}`} />
         </button>
 
         {/* Add to Playlist button */}
         <div ref={playlistMenuRef} className="relative shrink-0 flex items-center">
           <button
             onClick={() => setPlaylistMenuOpen(!playlistMenuOpen)}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer"
             title="Add to Playlist"
           >
-            <Plus className="w-4.5 h-4.5" />
+            <Plus className="w-4 h-4 lg:w-4.5 lg:h-4.5" />
           </button>
           
           {playlistMenuOpen && (
@@ -145,58 +145,58 @@ export const Player: React.FC<PlayerProps> = ({
       </div>
 
       {/* Center: Playback Progress & Controls */}
-      <div className="flex flex-col items-center gap-2 flex-1 max-w-xl px-2 lg:px-4">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col items-center gap-1.5 flex-1 max-w-lg min-w-0 relative">
+        <div className="flex items-center gap-4 lg:gap-6">
           <button
             onClick={() => setIsShuffled(!isShuffled)}
-            className={`p-2 rounded-lg transition-all cursor-pointer ${
+            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
               isShuffled ? "text-indigo-400" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            <Shuffle className="w-4 h-4" />
+            <Shuffle className="w-3.5 h-3.5 lg:w-4 h-4" />
           </button>
 
           <button
             onClick={handlePrev}
-            className="p-2 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
           >
-            <SkipBack className="w-5 h-5 fill-slate-400" />
+            <SkipBack className="w-4.5 h-4.5 lg:w-5 h-5 fill-slate-400" />
           </button>
 
           <button
             onClick={togglePlay}
-            className="w-12 h-12 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+            className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 shrink-0"
           >
             {isPlaying ? (
-              <Pause className="w-5 h-5 fill-slate-900" />
+              <Pause className="w-4 h-4 lg:w-5 h-5 fill-slate-900" />
             ) : (
-              <Play className="w-5 h-5 fill-slate-900 translate-x-0.5" />
+              <Play className="w-4 h-4 lg:w-5 h-5 fill-slate-900 translate-x-0.5" />
             )}
           </button>
 
           <button
             onClick={handleNext}
-            className="p-2 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
           >
-            <SkipForward className="w-5 h-5 fill-slate-400" />
+            <SkipForward className="w-4.5 h-4.5 lg:w-5 h-5 fill-slate-400" />
           </button>
 
           <button
             onClick={() => setIsLooping(!isLooping)}
-            className={`p-2 rounded-lg transition-all cursor-pointer ${
+            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
               isLooping ? "text-indigo-400" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            <Repeat className="w-4 h-4" />
+            <Repeat className="w-3.5 h-3.5 lg:w-4 h-4" />
           </button>
         </div>
 
         {/* Seek Bar */}
-        <div className="w-full flex items-center gap-3 group">
-          <span className="text-2xs font-medium text-slate-400 w-10 text-right font-mono">
+        <div className="w-full flex items-center gap-2 group">
+          <span className="text-[10px] font-medium text-slate-400 w-8 text-right font-mono shrink-0">
             {formatTime(progress)}
           </span>
-          <div className="relative flex-1 h-3 flex items-center">
+          <div className="relative flex-1 h-3 flex items-center min-w-0">
             <input
               type="range"
               min="0"
@@ -206,11 +206,11 @@ export const Player: React.FC<PlayerProps> = ({
               style={{
                 background: `linear-gradient(to right, #6366f1 ${(progress / (duration || 1)) * 100}%, rgba(255,255,255,0.05) ${(progress / (duration || 1)) * 100}%)`
               }}
-              className="absolute w-full h-1.5 rounded-full appearance-none cursor-pointer outline-none transition-all group-hover:h-2
-              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#818cf8] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(99,102,241,0.8)] [&::-webkit-slider-thumb]:opacity-0 group-hover:[&::-webkit-slider-thumb]:opacity-100 [&::-webkit-slider-thumb]:transition-opacity"
+              className="absolute w-full h-1 rounded-full appearance-none cursor-pointer outline-none transition-all group-hover:h-1.5
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#818cf8] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(99,102,241,0.8)] [&::-webkit-slider-thumb]:opacity-0 group-hover:[&::-webkit-slider-thumb]:opacity-100 [&::-webkit-slider-thumb]:transition-opacity"
             />
           </div>
-          <span className="text-2xs font-medium text-slate-500 w-10 text-left font-mono">
+          <span className="text-[10px] font-medium text-slate-500 w-8 text-left font-mono shrink-0">
             {formatTime(duration)}
           </span>
         </div>
@@ -224,14 +224,14 @@ export const Player: React.FC<PlayerProps> = ({
       </div>
 
       {/* Right: Volume & Extra Controls */}
-      <div className="flex items-center gap-2 lg:gap-4 lg:w-1/4 justify-end lg:min-w-[200px] shrink-0">
+      <div className="flex items-center gap-2 lg:gap-3 w-1/3 min-w-[80px] max-w-[200px] justify-end shrink-0">
         <button
           onClick={toggleMute}
           className="p-2 text-slate-400 hover:text-white transition-all cursor-pointer"
         >
-          {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          {isMuted || volume === 0 ? <VolumeX className="w-4.5 h-4.5 lg:w-5 h-5" /> : <Volume2 className="w-4.5 h-4.5 lg:w-5 h-5" />}
         </button>
-        <div className="relative w-24 h-3 hidden lg:flex items-center group">
+        <div className="relative w-16 lg:w-24 h-3 hidden sm:flex items-center group min-w-0">
           <input
             type="range"
             min="0"
@@ -242,8 +242,8 @@ export const Player: React.FC<PlayerProps> = ({
             style={{
               background: `linear-gradient(to right, #6366f1 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.05) ${(isMuted ? 0 : volume) * 100}%)`
             }}
-            className="absolute w-full h-1.5 rounded-full appearance-none cursor-pointer outline-none transition-all group-hover:h-2
-            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#818cf8] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(99,102,241,0.8)] [&::-webkit-slider-thumb]:opacity-0 group-hover:[&::-webkit-slider-thumb]:opacity-100 [&::-webkit-slider-thumb]:transition-opacity"
+            className="absolute w-full h-1 rounded-full appearance-none cursor-pointer outline-none transition-all group-hover:h-1.5
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#818cf8] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(99,102,241,0.8)] [&::-webkit-slider-thumb]:opacity-0 group-hover:[&::-webkit-slider-thumb]:opacity-100 [&::-webkit-slider-thumb]:transition-opacity"
           />
         </div>
       </div>
