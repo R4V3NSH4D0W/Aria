@@ -206,7 +206,7 @@ export default function App() {
           }}
           setShowCreatePlaylistModal={setShowCreatePlaylistModal}
           hasPlayer={!!currentTrack}
-          isOpen={isSidebarOpen}
+          isOpen={false}
         />
 
         {/* Main Content Area */}
@@ -221,8 +221,6 @@ export default function App() {
             handleSearch={handleSearch}
             favoriteSort={favoriteSort}
             setFavoriteSort={setFavoriteSort}
-            isSidebarOpen={isSidebarOpen}
-            toggleSidebar={() => setIsSidebarOpen((open) => !open)}
             onOpenSettings={() => setActiveTab("settings")}
             ytPlaylists={ytPlaylists}
           />

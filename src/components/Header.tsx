@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Search, Heart, ListMusic, History, Menu, Disc, Settings } from "lucide-react";
+import { ChevronDown, Search, Heart, ListMusic, History, Disc, Settings } from "lucide-react";
 import { Playlist } from "../types";
 
 interface HeaderProps {
@@ -10,8 +10,6 @@ interface HeaderProps {
   handleSearch: (e?: React.FormEvent) => void;
   favoriteSort: "recent" | "oldest" | "title";
   setFavoriteSort: (value: "recent" | "oldest" | "title") => void;
-  isSidebarOpen: boolean;
-  toggleSidebar: () => void;
   onOpenSettings: () => void;
   ytPlaylists: { id: string; title: string }[];
 }
@@ -24,8 +22,6 @@ export const Header: React.FC<HeaderProps> = ({
   handleSearch,
   favoriteSort,
   setFavoriteSort,
-  isSidebarOpen,
-  toggleSidebar,
   onOpenSettings,
   ytPlaylists,
 }) => {
@@ -57,21 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="p-6 sticky top-0 bg-[#08090a] border-b border-white/5 flex items-center justify-between gap-4 z-10">
       <div className="flex items-center gap-4 flex-1">
-        {/* Toggle Button */}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-          title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
 
-        {/* Disc Logo when Sidebar is Off */}
-        {!isSidebarOpen && (
-          <div className="flex items-center justify-center w-9 h-9 select-none">
-            <Disc className="w-5.5 h-5.5 text-white animate-spin" style={{ animationDuration: "6s" }} />
-          </div>
-        )}
 
         {activeTab === "search" ? (
           <form onSubmit={handleSearch} className="flex-1 max-w-md">

@@ -52,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="flex flex-col gap-1">
           <button
             onClick={() => setActiveTab("home")}
-            className={`flex items-center gap-3 justify-center ${isOpen ? "lg:justify-start" : "lg:justify-center"} px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "home"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab("search")}
-            className={`flex items-center gap-3 justify-center ${isOpen ? "lg:justify-start" : "lg:justify-center"} px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "search"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab("favorites")}
-            className={`flex items-center gap-3 justify-center ${isOpen ? "lg:justify-start" : "lg:justify-center"} px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "favorites"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -91,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab("recently-played")}
-            className={`flex items-center gap-3 justify-center ${isOpen ? "lg:justify-start" : "lg:justify-center"} px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
               activeTab === "recently-played"
                 ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                 : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {hasYtCookie && (
             <button
               onClick={() => setActiveTab("yt-playlists")}
-              className={`flex items-center gap-3 justify-center ${isOpen ? "lg:justify-start" : "lg:justify-center"} px-3 lg:px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+              className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
                 activeTab === "yt-playlists" || activeTab.startsWith("yt:")
                   ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
@@ -152,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={pl.id}
                 onClick={() => setActiveTab(pl.id)}
-                className={`group flex items-center ${isOpen ? "justify-between px-3" : "justify-center px-1"} py-2 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
+                className={`group flex items-center ${isOpen ? "justify-between px-3" : "justify-center px-0"} py-2 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer ${
                   activeTab === pl.id
                     ? "bg-white/10 text-white font-medium border border-white/5"
                     : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
