@@ -17,7 +17,7 @@ import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 
 export default function App() {
@@ -212,8 +212,70 @@ export default function App() {
     },
   });
 
+  // Time-synced lyrics parser helper
+  const parsedLyrics = useMemo(() => {
+    if (!lyrics) return { type: "plain" as const, lines: "" };
+    
+    const lines = lyrics.split("\n");
+    const parsedLines: { time: number; text: string }[] = [];
+    const timeRegex = /^\[(\d+):(\d+)(?:\.(\d+))?\](.*)/;
+    let isSynced = false;
 
+    for (const line of lines) {
+      const match = timeRegex.exec(line.trim());
+      if (match) {
+        isSynced = true;
+        const minutes = parseInt(match[1], 10);
+        const seconds = parseInt(match[2], 10);
+        const msStr = match[3] || "0";
+        const milliseconds = parseInt(msStr.padEnd(3, "0").slice(0, 3), 10);
+        
+        const time = minutes * 60 + seconds + milliseconds / 1000;
+        const text = match[4].trim();
+        parsedLines.push({ time, text });
+      } else {
+        const text = line.trim();
+        if (text) {
+          parsedLines.push({
+            time: parsedLines.length > 0 ? parsedLines[parsedLines.length - 1].time : 0,
+            text,
+          });
+        }
+      }
+    }
 
+    if (isSynced && parsedLines.length > 0) {
+      parsedLines.sort((a, b) => a.time - b.time);
+      return { type: "synced" as const, lines: parsedLines };
+    }
+
+    return { type: "plain" as const, lines: lyrics };
+  }, [lyrics]);
+
+  // Find active line index based on current playback progress
+  const activeLyricIndex = useMemo(() => {
+    if (parsedLyrics.type !== "synced") return -1;
+    
+    let activeIdx = -1;
+    for (let i = 0; i < parsedLyrics.lines.length; i++) {
+      if (progress >= parsedLyrics.lines[i].time) {
+        activeIdx = i;
+      } else {
+        break;
+      }
+    }
+    return activeIdx;
+  }, [parsedLyrics, progress]);
+
+  // Smooth scroll active line into view
+  useEffect(() => {
+    if (showLyricsMode && activeLyricIndex !== -1) {
+      const activeEl = document.getElementById(`lyric-line-${activeLyricIndex}`);
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }, [activeLyricIndex, showLyricsMode]);
 
   const hasQueue = queue.length > 0;
 
@@ -493,7 +555,7 @@ export default function App() {
           </div>
 
           {/* Lyrics Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-12 flex flex-col items-center justify-start min-h-0 scrollbar-thin select-text">
+          <div className="flex-1 overflow-y-auto px-6 py-20 flex flex-col items-center justify-start min-h-0 scrollbar-thin select-text scroll-py-32">
             {lyricsLoading ? (
               <div className="my-auto flex flex-col items-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
@@ -502,9 +564,30 @@ export default function App() {
                 </p>
               </div>
             ) : lyrics ? (
-              <div className="max-w-2xl text-center font-bold text-xl sm:text-2xl lg:text-3xl text-slate-200 leading-relaxed whitespace-pre-wrap tracking-tight py-4 drop-shadow-md select-text hover:text-white transition-colors">
-                {lyrics}
-              </div>
+              parsedLyrics.type === "synced" ? (
+                <div className="max-w-3xl w-full flex flex-col gap-6 py-24 px-4 select-text">
+                  {parsedLyrics.lines.map((line, idx) => {
+                    const isActive = idx === activeLyricIndex;
+                    return (
+                      <p
+                        key={idx}
+                        id={`lyric-line-${idx}`}
+                        className={`text-center transition-all duration-500 cursor-pointer origin-center ${
+                          isActive
+                            ? "text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white scale-[1.03] drop-shadow-[0_0_15px_rgba(255,255,255,0.45)] opacity-100"
+                            : "text-lg sm:text-xl lg:text-2xl font-bold text-slate-500 opacity-40 hover:opacity-75 hover:scale-[1.01]"
+                        }`}
+                      >
+                        {line.text}
+                      </p>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="max-w-2xl text-center font-bold text-xl sm:text-2xl lg:text-3xl text-slate-200 leading-relaxed whitespace-pre-wrap tracking-tight py-4 drop-shadow-md select-text hover:text-white transition-colors">
+                  {parsedLyrics.lines}
+                </div>
+              )
             ) : (
               <div className="my-auto text-center">
                 <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">

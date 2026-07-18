@@ -1307,26 +1307,18 @@ async fn get_yt_lyrics(
                 if let Some(true) = data.get("instrumental").and_then(|v| v.as_bool()) {
                     return Ok(Some("♪ Instrumental ♪".to_string()));
                 }
+                // Try syncedLyrics first (to allow time-synced scrolling in frontend)
+                if let Some(synced) = data.get("syncedLyrics").and_then(|v| v.as_str()) {
+                    if !synced.trim().is_empty() {
+                        println!("get_yt_lyrics: found synced lyrics from LRCLIB");
+                        return Ok(Some(synced.to_string()));
+                    }
+                }
                 // Try plainLyrics
                 if let Some(plain) = data.get("plainLyrics").and_then(|v| v.as_str()) {
                     if !plain.trim().is_empty() {
                         println!("get_yt_lyrics: successfully loaded plain lyrics from LRCLIB");
                         return Ok(Some(plain.to_string()));
-                    }
-                }
-                // Fallback to syncedLyrics with timestamps stripped
-                if let Some(synced) = data.get("syncedLyrics").and_then(|v| v.as_str()) {
-                    if !synced.trim().is_empty() {
-                        println!("get_yt_lyrics: found synced lyrics from LRCLIB, stripping timestamps");
-                        let mut lines = Vec::new();
-                        for line in synced.lines() {
-                            if let Some(pos) = line.find(']') {
-                                lines.push(line[pos + 1..].trim());
-                            } else {
-                                lines.push(line.trim());
-                            }
-                        }
-                        return Ok(Some(lines.join("\n")));
                     }
                 }
             }
