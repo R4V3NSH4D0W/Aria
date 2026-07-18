@@ -36,6 +36,7 @@ export function usePlayback({
   const recentlyPlayedAddedRef = useRef<string | null>(null);
   const playDurationRef = useRef(0);
   const lastTimeRef = useRef<number | null>(null);
+  const lastSeekTimeRef = useRef<number>(0);
 
   // Reset recently played tracking helper
   const resetThresholdTracking = useCallback(() => {
@@ -195,6 +196,14 @@ export function usePlayback({
         }
       }
 
+      // Auto-advance when we reach the song's actual duration from YouTube metadata.
+      // Ignore if a manual seek occurred within the last 1 second to allow seeking near the end
+      const isRecentlySeeking = Date.now() - lastSeekTimeRef.current < 1000;
+      if (duration > 0 && curTime >= duration && !isRecentlySeeking && !autoAdvancedRef.current) {
+        autoAdvancedRef.current = true;
+        audioRef.current.pause();
+        handleNext();
+      }
     }
   }, [currentTrack, duration, handleNext, onTrackPlayed]);
 
@@ -248,6 +257,7 @@ export function usePlayback({
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const seekTime = parseFloat(e.target.value);
     if (audioRef.current) {
+      lastSeekTimeRef.current = Date.now();
       audioRef.current.currentTime = seekTime;
       setProgress(seekTime);
       lastTimeRef.current = null; // Clear last time so seek jump is not counted
