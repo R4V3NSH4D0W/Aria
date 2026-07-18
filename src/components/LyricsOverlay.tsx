@@ -225,7 +225,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_20px_rgba(192,132,252,0.65)]"
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
                       >
                         {line.words.map((word, wIdx) => {
                           const nextWord = line.words![wIdx + 1];
@@ -238,7 +238,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                             <span
                               key={wIdx}
                               style={{
-                                background: `linear-gradient(to right, #c084fc ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
+                                background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
                                 WebkitBackgroundClip: "text",
                                 WebkitTextFillColor: "transparent",
                                 display: "inline-block",
@@ -266,7 +266,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_20px_rgba(192,132,252,0.65)]"
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
                       >
                         {words.map((word, wIdx) => {
                           const wordStartTime = line.time + wIdx * adjustedWordDuration;
@@ -277,7 +277,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                             <span
                               key={wIdx}
                               style={{
-                                background: `linear-gradient(to right, #c084fc ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
+                                background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
                                 WebkitBackgroundClip: "text",
                                 WebkitTextFillColor: "transparent",
                                 display: "inline-block",
