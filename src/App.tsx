@@ -1,4 +1,4 @@
-import { AlertCircle, WifiOff, FileText, X, Loader2 } from "lucide-react";
+import { AlertCircle, WifiOff } from "lucide-react";
 import { Track } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -6,6 +6,7 @@ import { ArtistDetailsView } from "./components/ArtistDetailsView";
 import { Player } from "./components/Player";
 import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
 import { QueuePanel } from "./components/QueuePanel.tsx";
+import { LyricsOverlay } from "./components/LyricsOverlay";
 import { Home } from "./components/Home";
 import { Settings } from "./components/Settings";
 import { SearchView } from "./components/SearchView";
@@ -17,7 +18,7 @@ import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 
 export default function App() {
@@ -211,71 +212,6 @@ export default function App() {
       );
     },
   });
-
-  // Time-synced lyrics parser helper
-  const parsedLyrics = useMemo(() => {
-    if (!lyrics) return { type: "plain" as const, lines: "" };
-    
-    const lines = lyrics.split("\n");
-    const parsedLines: { time: number; text: string }[] = [];
-    const timeRegex = /^\[(\d+):(\d+)(?:\.(\d+))?\](.*)/;
-    let isSynced = false;
-
-    for (const line of lines) {
-      const match = timeRegex.exec(line.trim());
-      if (match) {
-        isSynced = true;
-        const minutes = parseInt(match[1], 10);
-        const seconds = parseInt(match[2], 10);
-        const msStr = match[3] || "0";
-        const milliseconds = parseInt(msStr.padEnd(3, "0").slice(0, 3), 10);
-        
-        const time = minutes * 60 + seconds + milliseconds / 1000;
-        const text = match[4].trim();
-        parsedLines.push({ time, text });
-      } else {
-        const text = line.trim();
-        if (text) {
-          parsedLines.push({
-            time: parsedLines.length > 0 ? parsedLines[parsedLines.length - 1].time : 0,
-            text,
-          });
-        }
-      }
-    }
-
-    if (isSynced && parsedLines.length > 0) {
-      parsedLines.sort((a, b) => a.time - b.time);
-      return { type: "synced" as const, lines: parsedLines };
-    }
-
-    return { type: "plain" as const, lines: lyrics };
-  }, [lyrics]);
-
-  // Find active line index based on current playback progress
-  const activeLyricIndex = useMemo(() => {
-    if (parsedLyrics.type !== "synced") return -1;
-    
-    let activeIdx = -1;
-    for (let i = 0; i < parsedLyrics.lines.length; i++) {
-      if (progress >= parsedLyrics.lines[i].time) {
-        activeIdx = i;
-      } else {
-        break;
-      }
-    }
-    return activeIdx;
-  }, [parsedLyrics, progress]);
-
-  // Smooth scroll active line into view
-  useEffect(() => {
-    if (showLyricsMode && activeLyricIndex !== -1) {
-      const activeEl = document.getElementById(`lyric-line-${activeLyricIndex}`);
-      if (activeEl) {
-        activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }
-  }, [activeLyricIndex, showLyricsMode]);
 
   const hasQueue = queue.length > 0;
 
@@ -498,138 +434,46 @@ export default function App() {
 
       {/* Footer Player Card */}
       {currentTrack && (
-        <Player
-          currentTrack={currentTrack}
-          isPlaying={isPlaying}
-          isShuffled={isShuffled}
-          isLooping={isLooping}
-          isMuted={isMuted}
-          progress={progress}
-          duration={duration}
-          volume={volume}
-          playbackError={playbackError}
-          togglePlay={togglePlay}
-          toggleMute={toggleMute}
-          toggleFavorite={toggleFavorite}
-          isFavorite={isFavorite}
-          setIsShuffled={setIsShuffled}
-          setIsLooping={setIsLooping}
-          handleSeek={handleSeek}
-          handleVolumeChange={handleVolumeChange}
-          handleNext={handleNext}
-          handlePrev={handlePrev}
-          playlists={playlists}
-          addTrackToPlaylist={addTrackToPlaylist}
-          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-          showLyricsMode={showLyricsMode}
-          setShowLyricsMode={setShowLyricsMode}
-        />
+        <div className="relative z-50">
+          <Player
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            isShuffled={isShuffled}
+            isLooping={isLooping}
+            isMuted={isMuted}
+            progress={progress}
+            duration={duration}
+            volume={volume}
+            playbackError={playbackError}
+            togglePlay={togglePlay}
+            toggleMute={toggleMute}
+            toggleFavorite={toggleFavorite}
+            isFavorite={isFavorite}
+            setIsShuffled={setIsShuffled}
+            setIsLooping={setIsLooping}
+            handleSeek={handleSeek}
+            handleVolumeChange={handleVolumeChange}
+            handleNext={handleNext}
+            handlePrev={handlePrev}
+            playlists={playlists}
+            addTrackToPlaylist={addTrackToPlaylist}
+            setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            showLyricsMode={showLyricsMode}
+            setShowLyricsMode={setShowLyricsMode}
+          />
+        </div>
       )}
 
       {/* Full-screen Immersive Lyrics Mode Overlay */}
-      {showLyricsMode && currentTrack && (
-        <div className="fixed inset-x-0 top-0 bottom-24 z-40 bg-[#07080a]/80 backdrop-blur-3xl flex flex-col animate-fade-in">
-          {/* Header */}
-          <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 shrink-0">
-            <div className="flex items-center gap-4">
-              <img
-                src={currentTrack.thumbnail}
-                alt={currentTrack.title}
-                className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-lg"
-              />
-              <div>
-                <h2 className="text-base font-bold text-white leading-tight truncate max-w-md">
-                  {currentTrack.title}
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5 truncate max-w-md">
-                  {currentTrack.uploaderName}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowLyricsMode(false)}
-              className="p-2.5 rounded-full bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Lyrics Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-20 flex flex-col items-center justify-start min-h-0 scrollbar-thin select-text scroll-py-32">
-            {lyricsLoading ? (
-              <div className="my-auto flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-                <p className="text-sm text-slate-500 font-medium animate-pulse">
-                  Fetching lyrics...
-                </p>
-              </div>
-            ) : lyrics ? (
-              parsedLyrics.type === "synced" ? (
-                <div className="max-w-3xl w-full flex flex-col gap-8 py-24 px-4 select-text">
-                  {parsedLyrics.lines.map((line, idx) => {
-                    const isActive = idx === activeLyricIndex;
-                    if (isActive) {
-                      const words = line.text.split(/\s+/);
-                      const lineDuration = Math.max((parsedLyrics.lines[idx + 1]?.time ?? duration) - line.time, 0.5);
-                      const wordDuration = lineDuration / Math.max(words.length, 1);
-                      const activeWordIdx = Math.floor((progress - line.time) / wordDuration);
-
-                      return (
-                        <p
-                          key={idx}
-                          id={`lyric-line-${idx}`}
-                          className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold scale-[1.03] transition-all duration-350 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
-                        >
-                          {words.map((word, wIdx) => {
-                            const isWordActive = wIdx === activeWordIdx;
-                            return (
-                              <span
-                                key={wIdx}
-                                className={`transition-all duration-350 ${
-                                  isWordActive
-                                    ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
-                                    : "text-white/45"
-                                }`}
-                              >
-                                {word}
-                              </span>
-                            );
-                          })}
-                        </p>
-                      );
-                    } else {
-                      return (
-                        <p
-                          key={idx}
-                          id={`lyric-line-${idx}`}
-                          className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-500 origin-center"
-                        >
-                          {line.text}
-                        </p>
-                      );
-                    }
-                  })}
-                </div>
-              ) : (
-                <div className="max-w-2xl text-center font-bold text-xl sm:text-2xl lg:text-3xl text-slate-200 leading-relaxed whitespace-pre-wrap tracking-tight py-4 drop-shadow-md select-text hover:text-white transition-colors">
-                  {parsedLyrics.lines}
-                </div>
-              )
-            ) : (
-              <div className="my-auto text-center">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-6 h-6 text-indigo-400/40" />
-                </div>
-                <p className="text-base text-slate-400 font-semibold">
-                  No lyrics found
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Lyrics aren't available for this track right now.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+      {currentTrack && (
+        <LyricsOverlay
+          show={showLyricsMode}
+          onClose={() => setShowLyricsMode(false)}
+          currentTrack={currentTrack}
+          lyrics={lyrics}
+          lyricsLoading={lyricsLoading}
+          audioRef={audioRef}
+        />
       )}
 
       {/* Create Playlist Modal */}
