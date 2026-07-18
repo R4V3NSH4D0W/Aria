@@ -195,12 +195,6 @@ export function usePlayback({
         }
       }
 
-      // Auto-advance when we reach the song's actual duration from YouTube metadata.
-      if (duration > 0 && curTime >= duration && !autoAdvancedRef.current) {
-        autoAdvancedRef.current = true;
-        audioRef.current.pause();
-        handleNext();
-      }
     }
   }, [currentTrack, duration, handleNext, onTrackPlayed]);
 
