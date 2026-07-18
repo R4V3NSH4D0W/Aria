@@ -1201,22 +1201,27 @@ async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String>
 
     let mut req = client
         .post("https://music.youtube.com/youtubei/v1/browse")
+        .query(&[("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-NKNELL6OA")])
         .json(&payload)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
         .header("Content-Type", "application/json")
+        .header("X-Goog-AuthUser", "0")
         .header("X-Origin", "https://music.youtube.com")
         .header("Origin", "https://music.youtube.com")
         .header("Referer", "https://music.youtube.com/")
         .header("x-youtube-client-name", "67")
-        .header("x-youtube-client-version", "1.20260114.03.00")
-        .header("X-Goog-AuthUser", "0");
+        .header("x-youtube-client-version", "1.20260114.03.00");
 
     // Add cookie + SAPISIDHASH if authenticated
     if let Some(cookie) = get_cookie_header() {
-        if let Some(hash) = build_sapisid_hash(&cookie) {
-            req = req.header("Authorization", hash);
+        let hash = build_sapisid_hash(&cookie);
+        println!("get_yt_playlist_tracks: cookie len={}, sapisid_hash present={}", cookie.len(), hash.is_some());
+        if let Some(h) = hash {
+            req = req.header("Authorization", h);
         }
         req = req.header("Cookie", cookie);
+    } else {
+        println!("get_yt_playlist_tracks: NO cookie found in AUTH_COOKIE store");
     }
 
     let res = req.send().await
