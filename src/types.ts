@@ -47,3 +47,11 @@ export interface YtPlaylist {
   thumbnail: string;
   subtitle: string; // e.g. "12 songs"
 }
+
+export interface SavedRadio {
+  id: string; // RDxxxxxxxx
+  videoId: string; // Seed videoId
+  title: string;
+  thumbnail: string;
+  addedAt: number;
+}

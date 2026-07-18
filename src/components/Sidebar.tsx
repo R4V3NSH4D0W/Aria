@@ -9,6 +9,7 @@ import {
   History,
   Home,
   CloudLightning,
+  Radio,
 } from "lucide-react";
 import { Playlist } from "../types";
 
@@ -117,6 +118,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {isOpen && <span>YouTube Playlists</span>}
             </button>
           )}
+
+          <button
+            onClick={() => setActiveTab("yt-radios")}
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+              activeTab === "yt-radios"
+                ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
+            }`}
+            title={!isOpen ? "YouTube Radios" : undefined}
+          >
+            <Radio className="w-4 h-4 text-violet-400 shrink-0" />
+            {isOpen && <span>YouTube Radios</span>}
+          </button>
         </nav>
       </div>
 

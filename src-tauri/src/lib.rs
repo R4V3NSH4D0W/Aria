@@ -1169,6 +1169,104 @@ fn parse_playlist_item(item: &Value) -> Option<Value> {
     }
     None
 }
+fn parse_playlist_panel_video_renderer(r: &Value) -> Option<Value> {
+    let video_id = r.get("videoId").and_then(|v| v.as_str())?.to_string();
+    let title = r.pointer("/title/runs/0/text")
+        .or_else(|| r.pointer("/title/simpleText"))
+        .and_then(|v| v.as_str())?
+        .to_string();
+    
+    let mut artist = "Unknown Artist".to_string();
+    if let Some(runs) = r.pointer("/longBylineText/runs")
+        .or_else(|| r.pointer("/shortBylineText/runs"))
+        .and_then(|runs| runs.as_array()) {
+        artist = extract_artist_from_runs(runs);
+    }
+    
+    let thumbnail = r.pointer("/thumbnail/thumbnails/0/url")
+        .or_else(|| r.pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails/0/url"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+        
+    let mut duration_secs = 0;
+    if let Some(duration_str) = r.pointer("/lengthText/runs/0/text")
+        .or_else(|| r.pointer("/lengthText/simpleText"))
+        .and_then(|v| v.as_str()) {
+        if let Some(secs) = parse_duration_string(duration_str) {
+            duration_secs = secs;
+        }
+    }
+    
+    Some(serde_json::json!({
+        "type": "track",
+        "title": title,
+        "videoId": video_id,
+        "uploaderName": artist,
+        "duration": duration_secs,
+        "thumbnail": thumbnail
+    }))
+}
+
+async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: String) -> Result<Vec<Value>, String> {
+    let video_id = if browse_id.len() > 2 {
+        &browse_id[2..]
+    } else {
+        return Err("Invalid radio playlist ID".to_string());
+    };
+
+    println!("get_yt_radio_tracks_internal: video_id = {}, playlist_id = {}", video_id, browse_id);
+
+    let payload = serde_json::json!({
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20260114.03.00",
+                "hl": "en",
+                "gl": "US",
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0,gzip(gfe)"
+            }
+        },
+        "videoId": video_id,
+        "playlistId": browse_id
+    });
+
+    let mut req = client
+        .post("https://music.youtube.com/youtubei/v1/next")
+        .query(&[("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-NKNELL6OA")])
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+        .header("Content-Type", "application/json")
+        .header("X-Goog-AuthUser", "0")
+        .header("X-Origin", "https://music.youtube.com")
+        .header("Origin", "https://music.youtube.com")
+        .header("Referer", "https://music.youtube.com/");
+
+    if let Some(cookie) = get_cookie_header() {
+        req = req.header("Cookie", cookie);
+    }
+
+    let res = req.send().await.map_err(|e| format!("Request failed: {}", e))?;
+    let data: Value = res.json().await.map_err(|e| format!("Failed to parse JSON: {}", e))?;
+
+    let mut tracks = Vec::new();
+
+    if let Some(items) = data
+        .pointer("/contents/singleColumnMusicResultsRenderer/queue/queue/musicQueueRenderer/content/playlistPanelRenderer/contents")
+        .and_then(|v| v.as_array())
+    {
+        for item in items {
+            if let Some(r) = item.get("playlistPanelVideoRenderer") {
+                if let Some(track) = parse_playlist_panel_video_renderer(r) {
+                    tracks.push(track);
+                }
+            }
+        }
+    }
+
+    println!("get_yt_radio_tracks_internal: returning {} tracks", tracks.len());
+    Ok(tracks)
+}
 
 #[tauri::command]
 async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String> {
@@ -1178,6 +1276,10 @@ async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String>
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
+
+    if browse_id.starts_with("RD") {
+        return get_yt_radio_tracks_internal(&client, browse_id).await;
+    }
 
     // Ensure browseId starts with VL (YTM playlist convention)
     let effective_id = if browse_id.starts_with("VL") {

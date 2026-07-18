@@ -20,6 +20,8 @@ import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
 import { useEffect, useState } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
+import { YtRadiosView } from "./components/YtRadiosView";
+import { SavedRadio } from "./types";
 
 export default function App() {
   const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "https://w.wallhaven.cc/full/gw/wallhaven-gwmj9l.png");
@@ -62,6 +64,23 @@ export default function App() {
   } = useLibrary();
 
   const [showLyricsMode, setShowLyricsMode] = useState(false);
+  const [savedRadios, setSavedRadios] = useState<SavedRadio[]>(() => {
+    try {
+      const saved = localStorage.getItem("aria_saved_radios");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("aria_saved_radios", JSON.stringify(savedRadios));
+  }, [savedRadios]);
+
+  const deleteSavedRadio = (radioId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavedRadios((prev) => prev.filter((r) => r.id !== radioId));
+  };
 
   // Automatically minimize sidebar on small viewports, maximize on desktops
   useEffect(() => {
@@ -138,6 +157,24 @@ export default function App() {
       loadPlaylist(browseId);
     }
   }, [activeTab, loadPlaylist]);
+
+  // Auto-save YouTube Radio mixes to our Saved Radios list
+  useEffect(() => {
+    if (activeTab.startsWith("yt:RD") && ytPlaylistTracks.length > 0) {
+      const radioId = activeTab.slice(3);
+      if (!savedRadios.some((r) => r.id === radioId)) {
+        const firstTrack = ytPlaylistTracks[0];
+        const newRadio: SavedRadio = {
+          id: radioId,
+          videoId: radioId.slice(2),
+          title: `${firstTrack.title} Radio`,
+          thumbnail: firstTrack.thumbnail,
+          addedAt: Date.now(),
+        };
+        setSavedRadios((prev) => [newRadio, ...prev]);
+      }
+    }
+  }, [activeTab, ytPlaylistTracks, savedRadios]);
 
 
   const handleTabChange = (tab: string) => {
@@ -392,6 +429,12 @@ export default function App() {
                       ytPlaylists={ytPlaylists}
                       onSelectPlaylist={(id) => setActiveTab(`yt:${id}`)}
                     />
+                  ) : activeTab === "yt-radios" ? (
+                    <YtRadiosView
+                      savedRadios={savedRadios}
+                      onSelectRadio={(id) => setActiveTab(`yt:${id}`)}
+                      onDeleteRadio={deleteSavedRadio}
+                    />
                   ) : ytPlaylistLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
                       <div className="relative w-14 h-14 -translate-y-5">
@@ -423,7 +466,7 @@ export default function App() {
                       downloadingTrackIds={downloadingTrackIds}
                       downloadTrack={downloadTrack}
                       deleteDownload={deleteDownload}
-                      onBack={activeTab.startsWith("yt:") ? () => setActiveTab("yt-playlists") : undefined}
+                      onBack={activeTab.startsWith("yt:") ? (activeTab.startsWith("yt:RD") ? () => setActiveTab("yt-radios") : () => setActiveTab("yt-playlists")) : undefined}
                     />
                   )}
                 </>
