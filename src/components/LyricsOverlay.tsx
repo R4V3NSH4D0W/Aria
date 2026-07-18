@@ -126,8 +126,8 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   const activeLyricIndex = useMemo(() => {
     if (parsedLyrics.type !== "synced") return -1;
 
-    // Compensate for reading/vocal latency by leading by 300ms
-    const LYRIC_OFFSET = 0.3;
+    // Compensate for reading/vocal latency by leading by 450ms
+    const LYRIC_OFFSET = 0.45;
     const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
     let activeIdx = -1;
@@ -165,7 +165,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
   if (!show) return null;
 
-  const LYRIC_OFFSET = 0.3;
+  const LYRIC_OFFSET = 0.45;
   const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
   return (
@@ -211,28 +211,29 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
                   if (line.words) {
-                    // 1. High-precision syllable/word timing if available
+                    // 1. Fluid Syllable Water-Flow Highlighting (eLRC)
                     return (
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_18px_rgba(255,255,255,0.4)]"
                       >
                         {line.words.map((word, wIdx) => {
                           const nextWord = line.words![wIdx + 1];
-                          const isWordActive = adjustedProgress >= word.time && (!nextWord || adjustedProgress < nextWord.time);
-                          const isWordPast = adjustedProgress >= word.time;
+                          const wordEndTime = nextWord ? nextWord.time : (parsedLyrics.lines[idx + 1]?.time ?? (audioRef.current?.duration || word.time + 3));
+                          const wordDuration = Math.max(wordEndTime - word.time, 0.1);
+                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - word.time) / wordDuration));
+                          const fillPercent = wordProgress * 100;
 
                           return (
                             <span
                               key={wIdx}
-                              className={`transition-all duration-150 ${
-                                isWordActive
-                                  ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
-                                  : isWordPast
-                                  ? "text-white opacity-90"
-                                  : "text-white/45"
-                              }`}
+                              style={{
+                                background: `linear-gradient(to right, #ffffff ${fillPercent}%, rgba(255,255,255,0.3) ${fillPercent}%)`,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                display: "inline-block",
+                              }}
                             >
                               {word.text}
                             </span>
@@ -241,33 +242,32 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       </p>
                     );
                   } else {
-                    // 2. Even fallback distribution if only line-level timing is available
+                    // 2. Fluid Word Water-Flow Highlighting Fallback (LRC)
                     const words = line.text.split(/\s+/);
                     const nextLine = parsedLyrics.lines[idx + 1];
                     const lineDuration = Math.max((nextLine?.time ?? (audioRef.current?.duration || line.time + 5)) - line.time, 0.5);
                     const wordDuration = lineDuration / Math.max(words.length, 1);
-                    const activeWordIdx = Math.floor((adjustedProgress - line.time) / wordDuration);
 
                     return (
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_18px_rgba(255,255,255,0.4)]"
                       >
                         {words.map((word, wIdx) => {
-                          const isWordActive = wIdx === activeWordIdx;
-                          const isWordPast = wIdx <= activeWordIdx;
+                          const wordStartTime = line.time + wIdx * wordDuration;
+                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / wordDuration));
+                          const fillPercent = wordProgress * 100;
 
                           return (
                             <span
                               key={wIdx}
-                              className={`transition-all duration-150 ${
-                                isWordActive
-                                  ? "text-white scale-[1.05] drop-shadow-[0_0_15px_rgba(255,255,255,0.85)]"
-                                  : isWordPast
-                                  ? "text-white opacity-90"
-                                  : "text-white/45"
-                              }`}
+                              style={{
+                                background: `linear-gradient(to right, #ffffff ${fillPercent}%, rgba(255,255,255,0.3) ${fillPercent}%)`,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                display: "inline-block",
+                              }}
                             >
                               {word}
                             </span>
