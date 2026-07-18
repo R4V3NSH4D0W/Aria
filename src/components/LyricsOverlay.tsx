@@ -102,16 +102,36 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     return { type: "plain" as const, lines: lyrics };
   }, [lyrics]);
 
-  // RequestAnimationFrame loop for millisecond-precise audio tracking
+  // RequestAnimationFrame loop with sub-millisecond system clock interpolation
   useEffect(() => {
     if (!show || parsedLyrics.type !== "synced") return;
 
     let animationFrameId: number;
+    let lastAudioTime = 0;
+    let lastSystemTime = performance.now();
+    let isPlaying = false;
 
     const updateProgress = () => {
       const audio = audioRef.current;
       if (audio) {
-        setPreciseProgress(audio.currentTime);
+        const now = performance.now();
+        const playing = !audio.paused && !audio.seeking;
+        
+        // Sync with browser audio state when it actually steps/changes
+        if (audio.currentTime !== lastAudioTime || playing !== isPlaying) {
+          lastAudioTime = audio.currentTime;
+          lastSystemTime = now;
+          isPlaying = playing;
+        }
+
+        let computedProgress = lastAudioTime;
+        if (isPlaying) {
+          // Interpolate exact elapsed time between stepped browser ticks
+          const elapsed = (now - lastSystemTime) / 1000;
+          computedProgress = lastAudioTime + elapsed * audio.playbackRate;
+        }
+
+        setPreciseProgress(computedProgress);
       }
       animationFrameId = requestAnimationFrame(updateProgress);
     };
@@ -126,26 +146,15 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   const activeLyricIndex = useMemo(() => {
     if (parsedLyrics.type !== "synced") return -1;
 
-    // Compensate for reading/vocal latency by leading by 450ms
-    const LYRIC_OFFSET = 0.85;
+    // Snappy lead time offset (approx. 400ms) to ensure highlighted words align with vocal start
+    const LYRIC_OFFSET = 0.4;
     const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
     let activeIdx = -1;
     for (let i = 0; i < parsedLyrics.lines.length; i++) {
       const line = parsedLyrics.lines[i];
-      const nextLine = parsedLyrics.lines[i + 1];
-
       if (adjustedProgress >= line.time) {
-        const lineGap = nextLine ? nextLine.time - line.time : 8.0;
-        const wordCount = line.text.split(/\s+/).filter(Boolean).length;
-        const estimatedDuration = Math.max(wordCount * 0.45 + 1.2, 3.2);
-        const activeDuration = Math.min(lineGap, estimatedDuration);
-
-        if (adjustedProgress < line.time + activeDuration) {
-          activeIdx = i;
-        } else {
-          activeIdx = -1;
-        }
+        activeIdx = i;
       } else {
         break;
       }
@@ -165,7 +174,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
   if (!show) return null;
 
-  const LYRIC_OFFSET = 0.85;
+  const LYRIC_OFFSET = 0.4;
   const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
   return (
@@ -206,12 +215,12 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
           </div>
         ) : lyrics ? (
           parsedLyrics.type === "synced" ? (
-            <div className="max-w-7xl w-full flex flex-col gap-8 py-24 px-4 select-text">
+            <div className="max-w-7xl w-full flex flex-col gap-8 py-24 px-4 select-text text-center">
               {parsedLyrics.lines.map((line, idx) => {
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
                   if (line.words) {
-                    // 1. Fluid Syllable Water-Flow Highlighting (eLRC)
+                    // 1. High-precision syllable/word timing if available (eLRC)
                     return (
                       <p
                         key={idx}
@@ -242,11 +251,16 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       </p>
                     );
                   } else {
-                    // 2. Fluid Word Water-Flow Highlighting Fallback (LRC)
+                    // 2. Continuous Word Water-Flow Highlighting Fallback (LRC)
                     const words = line.text.split(/\s+/);
                     const nextLine = parsedLyrics.lines[idx + 1];
-                    const lineDuration = Math.max((nextLine?.time ?? (audioRef.current?.duration || line.time + 5)) - line.time, 0.5);
-                    const wordDuration = lineDuration / Math.max(words.length, 1);
+                    const lineGap = nextLine ? nextLine.time - line.time : 8.0;
+                    
+                    // Distribute words over an estimated singing duration to avoid slow sweeps in silent gaps
+                    const wordDuration = 0.35; // 350ms average singing duration per word
+                    const estimatedVocalDuration = words.length * wordDuration + 0.3;
+                    const activeDuration = Math.min(lineGap, estimatedVocalDuration);
+                    const adjustedWordDuration = activeDuration / Math.max(words.length, 1);
 
                     return (
                       <p
@@ -255,8 +269,8 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                         className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_20px_rgba(192,132,252,0.65)]"
                       >
                         {words.map((word, wIdx) => {
-                          const wordStartTime = line.time + wIdx * wordDuration;
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / wordDuration));
+                          const wordStartTime = line.time + wIdx * adjustedWordDuration;
+                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / adjustedWordDuration));
                           const fillPercent = wordProgress * 100;
 
                           return (
