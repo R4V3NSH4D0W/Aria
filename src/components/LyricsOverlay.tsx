@@ -87,8 +87,21 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
     let activeIdx = -1;
     for (let i = 0; i < parsedLyrics.lines.length; i++) {
-      if (preciseProgress >= parsedLyrics.lines[i].time) {
-        activeIdx = i;
+      const line = parsedLyrics.lines[i];
+      const nextLine = parsedLyrics.lines[i + 1];
+
+      if (preciseProgress >= line.time) {
+        const lineGap = nextLine ? nextLine.time - line.time : 8.0;
+        const wordCount = line.text.split(/\s+/).filter(Boolean).length;
+        const estimatedDuration = Math.max(wordCount * 0.45 + 1.2, 3.2);
+        const activeDuration = Math.min(lineGap, estimatedDuration);
+
+        if (preciseProgress < line.time + activeDuration) {
+          activeIdx = i;
+        } else {
+          // If we are in the gap between lines, clear the active highlight
+          activeIdx = -1;
+        }
       } else {
         break;
       }
