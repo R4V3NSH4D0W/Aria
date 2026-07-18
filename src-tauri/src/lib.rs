@@ -1275,13 +1275,68 @@ async fn get_yt_playlist_tracks(browse_id: String) -> Result<Vec<Value>, String>
 }
 
 #[tauri::command]
-async fn get_yt_lyrics(video_id: String) -> Result<Option<String>, String> {
-    println!("get_yt_lyrics for video_id: {}", video_id);
+async fn get_yt_lyrics(
+    video_id: String,
+    title: String,
+    artist: String,
+    duration: u64,
+) -> Result<Option<String>, String> {
+    println!("get_yt_lyrics: video_id={}, title={}, artist={}, duration={}", video_id, title, artist, duration);
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| e.to_string())?;
 
+    // 1. Try LRCLIB API first
+    let query_params = [
+        ("artist_name", &artist),
+        ("track_name", &title),
+        ("duration", &duration.to_string()),
+    ];
+    println!("get_yt_lyrics: querying LRCLIB with {:?}", query_params);
+
+    if let Ok(res) = client.get("https://lrclib.net/api/get")
+        .query(&query_params)
+        .header("User-Agent", "Aria Music Player v1.0.7 (https://github.com/R4V3NSH4D0W/Aria)")
+        .send()
+        .await
+    {
+        if res.status().is_success() {
+            if let Ok(data) = res.json::<serde_json::Value>().await {
+                // If it is marked as instrumental
+                if let Some(true) = data.get("instrumental").and_then(|v| v.as_bool()) {
+                    return Ok(Some("♪ Instrumental ♪".to_string()));
+                }
+                // Try plainLyrics
+                if let Some(plain) = data.get("plainLyrics").and_then(|v| v.as_str()) {
+                    if !plain.trim().is_empty() {
+                        println!("get_yt_lyrics: successfully loaded plain lyrics from LRCLIB");
+                        return Ok(Some(plain.to_string()));
+                    }
+                }
+                // Fallback to syncedLyrics with timestamps stripped
+                if let Some(synced) = data.get("syncedLyrics").and_then(|v| v.as_str()) {
+                    if !synced.trim().is_empty() {
+                        println!("get_yt_lyrics: found synced lyrics from LRCLIB, stripping timestamps");
+                        let mut lines = Vec::new();
+                        for line in synced.lines() {
+                            if let Some(pos) = line.find(']') {
+                                lines.push(line[pos + 1..].trim());
+                            } else {
+                                lines.push(line.trim());
+                            }
+                        }
+                        return Ok(Some(lines.join("\n")));
+                    }
+                }
+            }
+        } else {
+            println!("get_yt_lyrics: LRCLIB returned HTTP status {}", res.status());
+        }
+    }
+
+    // 2. Fallback to YouTube Music API
+    println!("get_yt_lyrics: falling back to YouTube Music API");
     let next_payload = serde_json::json!({
         "context": {
             "client": {

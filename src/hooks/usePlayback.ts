@@ -79,7 +79,12 @@ export function usePlayback({
           // Fetch lyrics asynchronously
           setLyrics(null);
           setLyricsLoading(true);
-          invoke<string | null>("get_yt_lyrics", { videoId: track.videoId })
+          invoke<string | null>("get_yt_lyrics", {
+            videoId: track.videoId,
+            title: track.title,
+            artist: track.uploaderName,
+            duration: Math.round(track.duration || streamData.duration || 0),
+          })
             .then((lyricText) => {
               setLyrics(lyricText);
             })
