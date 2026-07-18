@@ -27,22 +27,13 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         z-index: 9999;
       }
-      .splash-logo {
-        position: relative;
-        width: 80px;
-        height: 80px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #6366f1 0%, #c084fc 100%);
-        border-radius: 50%; /* Circle for disc theme */
-        box-shadow: 0 10px 35px rgba(99, 102, 241, 0.4);
+      .splash-logo-img {
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 25px rgba(99, 102, 241, 0.45));
         margin-bottom: 20px;
-      }
-      .splash-logo svg {
-        width: 48px;
-        height: 48px;
-        animation: spin 4s linear infinite;
+        animation: pulse 2.5s ease-in-out infinite;
       }
       .splash-title {
         font-size: 24px;
@@ -70,9 +61,9 @@
         border-radius: 2px;
         animation: loading 1.5s infinite ease-in-out;
       }
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.4)); }
+        50% { transform: scale(1.04); filter: drop-shadow(0 0 35px rgba(99, 102, 241, 0.65)); }
       }
       @keyframes loading {
         0% { left: -40%; }
@@ -85,19 +76,7 @@
   <body>
     <div id="root">
       <div class="splash-container">
-        <div class="splash-logo">
-          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
-            <!-- Outer CD ring -->
-            <circle cx="12" cy="12" r="10" stroke="currentColor" />
-            <!-- Grooves -->
-            <circle cx="12" cy="12" r="7.5" stroke="currentColor" stroke-dasharray="3 1.5" />
-            <circle cx="12" cy="12" r="5" stroke="currentColor" />
-            <!-- Center label -->
-            <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-            <!-- spindle hole -->
-            <circle cx="12" cy="12" r="0.6" fill="#6366f1" stroke="none" />
-          </svg>
-        </div>
+        <img src="/aria_logo.png" alt="Aria" class="splash-logo-img" />
         <h1 class="splash-title">Aria</h1>
         <div class="splash-loader">
           <div class="splash-loader-bar"></div>
