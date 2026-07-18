@@ -101,19 +101,8 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     let activeIdx = -1;
     for (let i = 0; i < parsedLyrics.lines.length; i++) {
       const line = parsedLyrics.lines[i];
-      const nextLine = parsedLyrics.lines[i + 1];
-
       if (adjustedProgress >= line.time) {
-        const lineGap = nextLine ? nextLine.time - line.time : 8.0;
-        const wordCount = line.text.split(/\s+/).filter(Boolean).length;
-        const estimatedDuration = Math.max(wordCount * 0.45 + 1.2, 3.2);
-        const activeDuration = Math.min(lineGap, estimatedDuration);
-
-        if (adjustedProgress < line.time + activeDuration) {
-          activeIdx = i;
-        } else {
-          activeIdx = -1;
-        }
+        activeIdx = i;
       } else {
         break;
       }
@@ -180,9 +169,14 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                 if (isActive) {
                   const lineStart = line.time;
                   const nextLine = parsedLyrics.lines[idx + 1];
-                  const lineEnd = nextLine?.time ?? (audioRef.current?.duration || line.time + 6);
-                  const lineDuration = Math.max(lineEnd - lineStart, 0.5);
-                  const lineProgress = Math.max(0, Math.min(1, (adjustedProgress - lineStart) / lineDuration));
+                  const lineGap = nextLine ? nextLine.time - line.time : 8.0;
+                  const wordCount = line.text.split(/\s+/).filter(Boolean).length;
+                  
+                  // Calculate activeDuration based on actual singing time (approx. 0.4s per word + buffer)
+                  const estimatedDuration = Math.max(wordCount * 0.4 + 1.0, 2.8);
+                  const activeDuration = Math.min(lineGap, estimatedDuration);
+                  
+                  const lineProgress = Math.max(0, Math.min(1, (adjustedProgress - lineStart) / activeDuration));
                   const fillPercent = lineProgress * 100;
 
                   return (
