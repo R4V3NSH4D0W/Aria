@@ -98,7 +98,7 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="Paste YouTube Music URL..."
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.05] focus:bg-white/[0.07] border border-white/10 focus:border-white/20 text-slate-200 text-sm focus:outline-none transition-all duration-300 placeholder:text-slate-500 shadow-inner"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.05] focus:bg-white/[0.07] border border-white/10 focus:border-white/20 text-slate-200 text-sm focus:outline-none transition-all duration-300 placeholder:text-slate-500"
             />
             <button
               type="submit"
