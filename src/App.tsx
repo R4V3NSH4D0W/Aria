@@ -52,14 +52,25 @@ export default function App() {
   // Automatically minimize sidebar on small viewports, maximize on desktops
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1024px)");
-    const listener = (e: MediaQueryListEvent) => {
+    const listener = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsSidebarOpen(!e.matches);
     };
     // Set initial state
     setIsSidebarOpen(!media.matches);
     
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
+    if (media.addEventListener) {
+      media.addEventListener("change", listener as EventListener);
+    } else {
+      (media as any).addListener(listener);
+    }
+    
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener("change", listener as EventListener);
+      } else {
+        (media as any).removeListener(listener);
+      }
+    };
   }, [setIsSidebarOpen]);
 
   const {
