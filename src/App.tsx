@@ -225,6 +225,8 @@ export default function App() {
             isSidebarOpen={isSidebarOpen}
             toggleSidebar={() => setIsSidebarOpen((open) => !open)}
             onOpenSettings={() => setActiveTab("settings")}
+            ytPlaylists={ytPlaylists}
+            setActiveTab={setActiveTab}
           />
 
           <div
