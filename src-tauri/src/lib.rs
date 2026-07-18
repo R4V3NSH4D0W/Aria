@@ -1434,7 +1434,7 @@ async fn download_track(
     fs::create_dir_all(&local_data_dir)
         .map_err(|e| format!("Failed to create downloads directory: {}", e))?;
     
-    let file_name = format!("{}.mp3", video_id);
+    let file_name = format!("{}.m4a", video_id);
     local_data_dir.push(&file_name);
     
     let client = reqwest::Client::new();
@@ -1518,7 +1518,7 @@ fn check_download_exists(
         .map_err(|e| format!("Failed to get local data dir: {}", e))?;
         
     local_data_dir.push("downloads");
-    let file_name = format!("{}.mp3", video_id);
+    let file_name = format!("{}.m4a", video_id);
     local_data_dir.push(&file_name);
     
     if local_data_dir.exists() {
@@ -1539,7 +1539,7 @@ fn delete_downloaded_track(
         .map_err(|e| format!("Failed to get local data dir: {}", e))?;
         
     local_data_dir.push("downloads");
-    let file_name = format!("{}.mp3", video_id);
+    let file_name = format!("{}.m4a", video_id);
     local_data_dir.push(&file_name);
     
     if local_data_dir.exists() {
