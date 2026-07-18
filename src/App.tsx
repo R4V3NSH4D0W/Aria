@@ -51,7 +51,7 @@ export default function App() {
 
   // Automatically minimize sidebar on small viewports, maximize on desktops
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 1024px)");
+    const media = window.matchMedia("(max-width: 640px)");
     const listener = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsSidebarOpen(!e.matches);
     };

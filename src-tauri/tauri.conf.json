@@ -12,8 +12,8 @@
   "app": {
     "windows": [
       {
-        "width": 1366,
-        "height": 768,
+        "width": 1200,
+        "height": 800,
         "minWidth": 800,
         "minHeight": 600,
         "title": "Aria"

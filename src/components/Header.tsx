@@ -60,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Toggle Button (Hidden on small screens, shown on medium/large screens) */}
         <button
           onClick={toggleSidebar}
-          className="hidden lg:block p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          className="hidden sm:block p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
         >
           <Menu className="w-5 h-5" />
