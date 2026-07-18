@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2, Plus, Mic2 } from "lucide-react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2, Plus, MessageSquareText } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -236,7 +236,7 @@ export const Player: React.FC<PlayerProps> = ({
           }`}
           title="Lyrics mode"
         >
-          <Mic2 className="w-4.5 h-4.5 lg:w-5 h-5" />
+          <MessageSquareText className="w-4.5 h-4.5 lg:w-5 h-5" />
         </button>
         <button
           onClick={toggleMute}
