@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const hasYtCookie = !!localStorage.getItem("aria_yt_cookie");
 
   return (
-    <aside className={`${isOpen ? "w-64" : "w-16"} bg-[#0e1015] border-r border-white/5 flex flex-col shrink-0 shadow-2xl overflow-hidden transition-all duration-300`}>
+    <aside className={`${isOpen ? "w-64" : "w-16"} bg-[#0e1015]/60 backdrop-blur-xl border-r border-white/5 flex flex-col shrink-0 shadow-2xl overflow-hidden transition-all duration-300`}>
       {/* ── Top: Logo + Nav (fixed height, never scrolls) ── */}
       <div className={`p-3 ${isOpen ? "lg:p-6" : "lg:p-3"} flex flex-col gap-5 shrink-0`}>
         {/* Logo */}

@@ -17,10 +17,16 @@ import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 
 export default function App() {
+  const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "");
+  const [wallpaperOpacity, setWallpaperOpacity] = useState(() => {
+    const saved = localStorage.getItem("aria_wallpaper_opacity");
+    return saved ? parseFloat(saved) : 0.3;
+  });
+
   const {
     playlists,
     ytPlaylists,
@@ -207,7 +213,18 @@ export default function App() {
   const hasQueue = queue.length > 0;
 
   return (
-    <main className="h-screen w-screen bg-[#08090a] text-slate-100 flex flex-col font-sans relative overflow-hidden select-none">
+    <main className={`h-screen w-screen text-slate-100 flex flex-col font-sans relative overflow-hidden select-none transition-colors duration-500 ${wallpaperUrl ? "bg-[#040506]" : "bg-[#08090a]"}`}>
+      {/* Background Wallpaper Layer */}
+      {wallpaperUrl && (
+        <img
+          src={wallpaperUrl}
+          alt=""
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover pointer-events-none z-0 transition-opacity duration-500"
+          style={{ opacity: wallpaperOpacity }}
+        />
+      )}
+
       {/* Hidden HTML5 Audio Element */}
       <audio
         ref={audioRef}
@@ -218,6 +235,8 @@ export default function App() {
         onEnded={handleAudioEnded}
         loop={isLooping}
       />
+
+      <div data-tauri-drag-region className="h-8 shrink-0 z-20" />
 
       <div className="flex flex-1 overflow-hidden z-10">
         <Sidebar
@@ -305,7 +324,13 @@ export default function App() {
                   fetchExplore={fetchExplore}
                 />
               ) : activeTab === "settings" ? (
-                <Settings onPlaylistsSync={setYtPlaylists} />
+                <Settings
+                  onPlaylistsSync={setYtPlaylists}
+                  wallpaperUrl={wallpaperUrl}
+                  setWallpaperUrl={setWallpaperUrl}
+                  wallpaperOpacity={wallpaperOpacity}
+                  setWallpaperOpacity={setWallpaperOpacity}
+                />
               ) : (
                 <>
                   {artistError && (

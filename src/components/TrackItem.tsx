@@ -50,8 +50,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({
       onClick={() => playTrack(track)}
       className={`group flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer ${
         isCurrent
-          ? "bg-[#161920] border-indigo-500/30 text-white shadow-lg"
-          : "bg-[#0e1015] border-white/5 hover:bg-[#12151c] text-slate-300"
+          ? "bg-[#161920]/80 border-indigo-500/30 text-white shadow-lg backdrop-blur-sm"
+          : "bg-[#0e1015]/40 border-white/5 hover:bg-[#12151c]/60 backdrop-blur-sm text-slate-300"
       }`}
     >
       <div className="flex items-center gap-4 min-w-0">

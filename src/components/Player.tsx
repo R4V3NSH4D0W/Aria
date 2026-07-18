@@ -66,7 +66,7 @@ export const Player: React.FC<PlayerProps> = ({
   }, []);
 
   return (
-    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015] border border-white/5 rounded-2xl px-4 lg:px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up gap-4">
+    <footer className="fixed bottom-6 left-6 right-6 h-24 bg-[#0e1015]/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 lg:px-6 flex items-center justify-between z-30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-player-slide-up gap-4">
       {/* Left: Track Info */}
       <div className="flex items-center gap-3 lg:gap-4 w-1/3 min-w-[160px] max-w-[280px] shrink-0">
         <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl overflow-hidden relative shadow-lg border border-white/5 bg-slate-800 shrink-0 group/thumb">
