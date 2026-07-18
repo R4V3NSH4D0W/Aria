@@ -97,6 +97,27 @@ export function useLibrary() {
     localStorage.setItem("aria_favorites", JSON.stringify(updated));
   }, []);
 
+  const deleteDownload = useCallback(async (videoId: string) => {
+    try {
+      await invoke("delete_downloaded_track", { videoId });
+      setDownloads((prev) => {
+        const next = prev.filter((t) => t.videoId !== videoId);
+        localStorage.setItem("aria_downloads", JSON.stringify(next));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to delete downloaded track", e);
+    }
+  }, []);
+
+  const checkAndCleanupDownload = useCallback((videoId: string, nextFavorites: Track[], nextPlaylists: Playlist[]) => {
+    const isInFavs = nextFavorites.some((t) => t.videoId === videoId);
+    const isInLocalPlaylists = nextPlaylists.some((p) => p.tracks.some((t) => t.videoId === videoId));
+    if (!isInFavs && !isInLocalPlaylists) {
+      deleteDownload(videoId);
+    }
+  }, [deleteDownload]);
+
   const isFavorite = useCallback(
     (track: Track) => favorites.some((t) => t.videoId === track.videoId),
     [favorites]
@@ -107,12 +128,14 @@ export function useLibrary() {
       let updated;
       if (isFavorite(track)) {
         updated = favorites.filter((t) => t.videoId !== track.videoId);
+        saveFavorites(updated);
+        checkAndCleanupDownload(track.videoId, updated, playlists);
       } else {
         updated = [...favorites, { ...track, addedAt: Date.now() }];
+        saveFavorites(updated);
       }
-      saveFavorites(updated);
     },
-    [favorites, isFavorite, saveFavorites]
+    [favorites, isFavorite, saveFavorites, checkAndCleanupDownload, playlists]
   );
 
   const createPlaylist = useCallback(() => {
@@ -131,11 +154,19 @@ export function useLibrary() {
   const deletePlaylist = useCallback(
     (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
+      const targetPlaylist = playlists.find((p) => p.id === id);
       const updated = playlists.filter((p) => p.id !== id);
       savePlaylists(updated);
+      
+      if (targetPlaylist) {
+        for (const track of targetPlaylist.tracks) {
+          checkAndCleanupDownload(track.videoId, favorites, updated);
+        }
+      }
+      
       if (activeTab === id) setActiveTab("search");
     },
-    [playlists, activeTab, savePlaylists]
+    [playlists, activeTab, savePlaylists, favorites, checkAndCleanupDownload]
   );
 
   const handleTabChange = useCallback((tab: string) => {
@@ -174,6 +205,7 @@ export function useLibrary() {
         return p;
       });
       savePlaylists(updated);
+      checkAndCleanupDownload(videoId, favorites, updated);
     },
     [playlists, savePlaylists]
   );
@@ -250,18 +282,6 @@ export function useLibrary() {
     }
   }, [favorites, playlists, downloadingTrackIds]);
 
-  const deleteDownload = useCallback(async (videoId: string) => {
-    try {
-      await invoke("delete_downloaded_track", { videoId });
-      setDownloads((prev) => {
-        const next = prev.filter((t) => t.videoId !== videoId);
-        localStorage.setItem("aria_downloads", JSON.stringify(next));
-        return next;
-      });
-    } catch (e) {
-      console.error("Failed to delete downloaded track", e);
-    }
-  }, []);
 
   return {
     playlists,
