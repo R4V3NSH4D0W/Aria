@@ -57,7 +57,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({
 }) => {
   const isDownloaded = downloads?.some((t) => t.videoId === track.videoId) || !!track.localPath;
   const isDownloading = downloadingTrackIds?.has(track.videoId);
-  const isLocalContext = activeTab === "favorites" || (
+  const isLocalContext = activeTab === "favorites" || activeTab.startsWith("yt:RD") || (
     activeTab !== "search" && activeTab !== "home" && activeTab !== "yt-playlists" && activeTab !== "recently-played" && !activeTab.startsWith("yt:")
   );
 
