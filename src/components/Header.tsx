@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Search, Heart, ListMusic, History, Menu, Disc, Settings, ArrowLeft } from "lucide-react";
+import { ChevronDown, Search, Heart, ListMusic, History, Menu, Disc, Settings } from "lucide-react";
 import { Playlist } from "../types";
 
 interface HeaderProps {
