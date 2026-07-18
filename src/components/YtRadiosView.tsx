@@ -102,9 +102,9 @@ export const YtRadiosView: React.FC<YtRadiosViewProps> = ({
             />
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all duration-300 cursor-pointer hover:-translate-y-0.5 flex items-center gap-2 shrink-0"
+              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 hover:border-white/20 font-semibold text-sm transition-all duration-300 cursor-pointer flex items-center gap-2 shrink-0"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 text-slate-400" />
               <span>Load</span>
             </button>
           </div>
