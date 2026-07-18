@@ -216,25 +216,49 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_20px_rgba(192,132,252,0.65)]"
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
                       >
                         {line.words.map((word, wIdx) => {
                           const nextWord = line.words![wIdx + 1];
                           const wordEndTime = nextWord ? nextWord.time : (parsedLyrics.lines[idx + 1]?.time ?? (audioRef.current?.duration || word.time + 3));
                           const wordDuration = Math.max(wordEndTime - word.time, 0.1);
+                          
+                          const isWordActive = adjustedProgress >= word.time && adjustedProgress < wordEndTime;
+                          const isWordPast = adjustedProgress >= wordEndTime;
                           const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - word.time) / wordDuration));
                           const fillPercent = wordProgress * 100;
 
+                          let wordStyle: React.CSSProperties = {};
+                          let wordClass = "";
+
+                          if (isWordActive) {
+                            wordStyle = {
+                              background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              display: "inline-block",
+                            };
+                            wordClass = "scale-[1.03] transition-all duration-150 drop-shadow-[0_0_15px_rgba(99,102,241,0.85)] font-black text-[#818cf8]";
+                          } else if (isWordPast) {
+                            wordStyle = {
+                              background: "#ffffff",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              display: "inline-block",
+                            };
+                            wordClass = "transition-all duration-300 opacity-95 text-white font-extrabold";
+                          } else {
+                            wordStyle = {
+                              background: "rgba(255,255,255,0.25)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              display: "inline-block",
+                            };
+                            wordClass = "transition-all duration-300 font-extrabold";
+                          }
+
                           return (
-                            <span
-                              key={wIdx}
-                              style={{
-                                background: `linear-gradient(to right, #c084fc ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                display: "inline-block",
-                              }}
-                            >
+                            <span key={wIdx} style={wordStyle} className={wordClass}>
                               {word.text}
                             </span>
                           );
@@ -252,23 +276,48 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 drop-shadow-[0_0_20px_rgba(192,132,252,0.65)]"
+                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
                       >
                         {words.map((word, wIdx) => {
                           const wordStartTime = line.time + wIdx * wordDuration;
+                          const wordEndTime = wordStartTime + wordDuration;
+                          
+                          const isWordActive = adjustedProgress >= wordStartTime && adjustedProgress < wordEndTime;
+                          const isWordPast = adjustedProgress >= wordEndTime;
                           const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / wordDuration));
                           const fillPercent = wordProgress * 100;
 
+                          let wordStyle: React.CSSProperties = {};
+                          let wordClass = "";
+
+                          if (isWordActive) {
+                            wordStyle = {
+                              background: `linear-gradient(to right, #6366f1 ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              display: "inline-block",
+                            };
+                            wordClass = "scale-[1.03] transition-all duration-150 drop-shadow-[0_0_15px_rgba(99,102,241,0.85)] font-black text-[#818cf8]";
+                          } else if (isWordPast) {
+                            wordStyle = {
+                              background: "#ffffff",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              display: "inline-block",
+                            };
+                            wordClass = "transition-all duration-300 opacity-95 text-white font-extrabold";
+                          } else {
+                            wordStyle = {
+                              background: "rgba(255,255,255,0.25)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              display: "inline-block",
+                            };
+                            wordClass = "transition-all duration-300 font-extrabold";
+                          }
+
                           return (
-                            <span
-                              key={wIdx}
-                              style={{
-                                background: `linear-gradient(to right, #c084fc ${fillPercent}%, rgba(255,255,255,0.25) ${fillPercent}%)`,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                display: "inline-block",
-                              }}
-                            >
+                            <span key={wIdx} style={wordStyle} className={wordClass}>
                               {word}
                             </span>
                           );
