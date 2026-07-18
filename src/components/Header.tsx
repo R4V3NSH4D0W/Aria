@@ -68,8 +68,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Disc Logo when Sidebar is Off */}
         {!isSidebarOpen && (
-          <div className="flex items-center gap-2.5 mr-4 select-none">
-            <Disc className="w-6 h-6 text-white animate-spin" style={{ animationDuration: "6s" }} />
+          <div className="flex items-center justify-center w-9 h-9 select-none">
+            <Disc className="w-5.5 h-5.5 text-white animate-spin" style={{ animationDuration: "6s" }} />
           </div>
         )}
 
