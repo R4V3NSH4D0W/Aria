@@ -371,10 +371,7 @@ export default function App() {
             <div className="lg:col-span-1 min-w-0 flex flex-col gap-6 h-full">
               {artistLoading ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                  <div className="relative w-14 h-14 -translate-y-5">
-                    <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-                    <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
-                  </div>
+                  <div className="w-10 h-10 border-2 border-white/10 border-t-indigo-500 rounded-full animate-spin -translate-y-5" />
                   <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
                     Loading Artist Profile...
                   </p>
@@ -470,10 +467,7 @@ export default function App() {
                     />
                   ) : ytPlaylistLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                      <div className="relative w-14 h-14 -translate-y-5">
-                        <div className="absolute inset-0 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
-                        <div className="absolute inset-2 rounded-full border-4 border-purple-500/10 border-t-purple-500 animate-spin shimmer-reverse" />
-                      </div>
+                      <div className="w-10 h-10 border-2 border-white/10 border-t-violet-500 rounded-full animate-spin -translate-y-5" />
                       <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
                         Loading Playlist...
                       </p>
