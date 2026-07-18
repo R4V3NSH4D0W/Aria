@@ -1208,6 +1208,26 @@ fn parse_playlist_panel_video_renderer(r: &Value) -> Option<Value> {
     }))
 }
 
+fn find_playlist_panel_renderer(v: &Value) -> Option<&Value> {
+    if let Some(obj) = v.as_object() {
+        if let Some(panel) = obj.get("playlistPanelRenderer") {
+            return Some(panel);
+        }
+        for value in obj.values() {
+            if let Some(panel) = find_playlist_panel_renderer(value) {
+                return Some(panel);
+            }
+        }
+    } else if let Some(arr) = v.as_array() {
+        for value in arr {
+            if let Some(panel) = find_playlist_panel_renderer(value) {
+                return Some(panel);
+            }
+        }
+    }
+    None
+}
+
 async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: String) -> Result<Vec<Value>, String> {
     let video_id = if browse_id.len() > 2 {
         &browse_id[2..]
@@ -1249,19 +1269,26 @@ async fn get_yt_radio_tracks_internal(client: &reqwest::Client, browse_id: Strin
     let res = req.send().await.map_err(|e| format!("Request failed: {}", e))?;
     let data: Value = res.json().await.map_err(|e| format!("Failed to parse JSON: {}", e))?;
 
+    let raw = serde_json::to_string(&data).unwrap_or_default();
+    println!("get_yt_radio_tracks_internal: data size = {}", raw.len());
+
     let mut tracks = Vec::new();
 
-    if let Some(items) = data
-        .pointer("/contents/singleColumnMusicResultsRenderer/queue/queue/musicQueueRenderer/content/playlistPanelRenderer/contents")
-        .and_then(|v| v.as_array())
-    {
-        for item in items {
-            if let Some(r) = item.get("playlistPanelVideoRenderer") {
-                if let Some(track) = parse_playlist_panel_video_renderer(r) {
-                    tracks.push(track);
+    if let Some(panel) = find_playlist_panel_renderer(&data) {
+        println!("get_yt_radio_tracks_internal: found playlistPanelRenderer");
+        if let Some(items) = panel.get("contents").and_then(|v| v.as_array()) {
+            println!("get_yt_radio_tracks_internal: found {} contents items", items.len());
+            for item in items {
+                if let Some(r) = item.get("playlistPanelVideoRenderer") {
+                    if let Some(track) = parse_playlist_panel_video_renderer(r) {
+                        tracks.push(track);
+                    }
                 }
             }
         }
+    } else {
+        println!("get_yt_radio_tracks_internal: playlistPanelRenderer not found in response!");
+        println!("get_yt_radio_tracks_internal: raw snippet: {}", &raw[..raw.len().min(1500)]);
     }
 
     println!("get_yt_radio_tracks_internal: returning {} tracks", tracks.len());
