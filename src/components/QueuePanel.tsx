@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Track } from "../types";
 import {
   DndContext,
@@ -272,41 +273,44 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
             </SortableContext>
 
             {/* Custom Drag Overlay for absolute smooth, flicker-free rendering of the dragged card */}
-            <DragOverlay adjustScale={false}>
-              {activeTrack ? (
-                <div className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-indigo-500 bg-[#12151b] text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] scale-[1.03] opacity-95 select-none">
-                  <span className="text-slate-300 shrink-0 cursor-grabbing p-1 -m-1">
-                    <GripVertical className="w-4 h-4" />
-                  </span>
+            {createPortal(
+              <DragOverlay adjustScale={false}>
+                {activeTrack ? (
+                  <div className="w-[288px] flex items-center gap-3 p-2.5 rounded-xl border border-indigo-500 bg-[#12151b] text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] scale-[1.03] opacity-95 select-none">
+                    <span className="text-slate-300 shrink-0 cursor-grabbing p-1 -m-1">
+                      <GripVertical className="w-4 h-4" />
+                    </span>
 
-                  <img
-                    src={activeTrack.thumbnail}
-                    alt={activeTrack.title}
-                    draggable={false}
-                    className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/5 select-none"
-                  />
+                    <img
+                      src={activeTrack.thumbnail}
+                      alt={activeTrack.title}
+                      draggable={false}
+                      className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/5 select-none"
+                    />
 
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate text-white">
-                      {activeTrack.title}
-                    </p>
-                    <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                      {activeTrack.uploaderName}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate text-white">
+                        {activeTrack.title}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        {activeTrack.uploaderName}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 text-slate-400 pr-2">
+                      {activeTrack.duration > 0 && (
+                        <span className="text-[11px] font-mono">
+                          {Math.floor(activeTrack.duration / 60)}:{String(
+                            Math.floor(activeTrack.duration % 60),
+                          ).padStart(2, "0")}
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2 shrink-0 text-slate-400 pr-2">
-                    {activeTrack.duration > 0 && (
-                      <span className="text-[11px] font-mono">
-                        {Math.floor(activeTrack.duration / 60)}:{String(
-                          Math.floor(activeTrack.duration % 60),
-                        ).padStart(2, "0")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </DragOverlay>
+                ) : null}
+              </DragOverlay>,
+              document.body
+            )}
           </DndContext>
         )}
       </div>
