@@ -31,51 +31,26 @@ Fast • Native • Beautiful
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
-<div align="center">
-
-### 🏠 Home
-
-![Home](screenshots/Aria-Home.png)
-
----
-
-### 🔍 Search
-
-![Search](screenshots/Aria-Search.png)
-
----
-
-### ❤️ Favorites
-
-![Favorites](screenshots/Aria-Favorites.png)
-
----
-
-### 🎤 Artist Profile
-
-![Artist Profile](screenshots/Aria-Artist-profile.png)
-
----
-
-### 📝 Lyrics
-
-![Lyrics](screenshots/Aria-Lyric.png)
-
----
-
-### 🎤 Karaoke Mode
-
-![Karaoke Mode](screenshots/Aria-Karaoke-mode.png)
-
----
-
-### 📻 Subscriptions
-
-![Subscriptions](screenshots/Aria-Subscriptions.png)
-
-</div>
+<table>
+  <tr>
+    <td><strong>Home</strong><br><img src="screenshots/Aria-Home.png" width="400"></td>
+    <td><strong>Search</strong><br><img src="screenshots/Aria-Search.png" width="400"></td>
+  </tr>
+  <tr>
+    <td><strong>Favorites</strong><br><img src="screenshots/Aria-Favorites.png" width="400"></td>
+    <td><strong>Artist Profile</strong><br><img src="screenshots/Aria-Artist-profile.png" width="400"></td>
+  </tr>
+  <tr>
+    <td><strong>Lyrics</strong><br><img src="screenshots/Aria-Lyric.png" width="400"></td>
+    <td><strong>Karaoke Mode</strong><br><img src="screenshots/Aria-Karaoke-mode.png" width="400"></td>
+  </tr>
+  <tr>
+    <td><strong>Subscriptions</strong><br><img src="screenshots/Aria-Subscriptions.png" width="400"></td>
+    <td></td>
+  </tr>
+</table>
 
 ---
 
