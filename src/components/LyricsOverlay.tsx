@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { X, Loader2, FileText, Coffee, Moon, Mic } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { Track } from "../types";
@@ -45,6 +45,8 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 }) => {
   const [preciseProgress, setPreciseProgress] = useState(0);
   const [keepAwake, setKeepAwake] = useState(readKeepAwakePreference);
+  const [isMouseIdle, setIsMouseIdle] = useState(false);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
 
   // Time-synced lyrics parser helper
   const parsedLyrics = useMemo(() => {
@@ -150,6 +152,42 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     };
   }, [show, keepAwake]);
 
+  // Hide cursor on mouse inactivity in Karaoke Mode for immersive view
+  useEffect(() => {
+    if (!show || !karaokeMode) {
+      setIsMouseIdle(false);
+      return;
+    }
+
+    let timeoutId: number;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const lastPos = lastMousePosRef.current;
+      // Ignore fake/simulated mousemove events from DOM layout shifts or scroll movements
+      if (e.clientX === lastPos.x && e.clientY === lastPos.y) {
+        return;
+      }
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+
+      setIsMouseIdle(false);
+      clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        setIsMouseIdle(true);
+      }, 3000); // 3 seconds idle time
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    // Initialize the idle timer on mount/visibility
+    timeoutId = window.setTimeout(() => {
+      setIsMouseIdle(true);
+    }, 3000);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      clearTimeout(timeoutId);
+    };
+  }, [show, karaokeMode]);
+
   const toggleKeepAwake = () => {
     setKeepAwake((prev) => {
       const next = !prev;
@@ -238,7 +276,10 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-[#07080a]/92 backdrop-blur-3xl flex flex-col animate-fade-in">
+    <div
+      style={{ cursor: isMouseIdle ? "none" : "auto" }}
+      className="fixed inset-0 z-[70] bg-[#07080a]/92 backdrop-blur-3xl flex flex-col animate-fade-in"
+    >
       {/* Header */}
       <div
         className={`flex items-center justify-between gap-3 pl-20 pr-6 shrink-0 transition-all duration-300 ${
