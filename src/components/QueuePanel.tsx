@@ -274,7 +274,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
             {/* Custom Drag Overlay for absolute smooth, flicker-free rendering of the dragged card */}
             <DragOverlay adjustScale={false}>
               {activeTrack ? (
-                <div className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-indigo-500 bg-[#12151b] text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] scale-[1.03] opacity-95 select-none transition-transform duration-75">
+                <div className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-indigo-500 bg-[#12151b] text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] scale-[1.03] opacity-95 select-none">
                   <span className="text-slate-300 shrink-0 cursor-grabbing p-1 -m-1">
                     <GripVertical className="w-4 h-4" />
                   </span>
