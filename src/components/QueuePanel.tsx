@@ -7,7 +7,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 import { Track } from "../types";
 import {
   DndContext,
@@ -16,6 +16,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -37,22 +39,35 @@ interface QueuePanelProps {
 
 interface SortableTrackItemProps {
   track: Track;
-  index: number;
+  stableId: string;
   current: boolean;
   isPlaying: boolean;
   onPlayTrack: (track: Track) => void;
   onRemoveTrack: (videoId: string) => void;
 }
 
+// WeakMap to cache stable IDs for Track object references.
+// This survives reordering, preventing key changes and DOM recreation.
+const trackIdMap = new WeakMap<object, string>();
+let idCounter = 0;
+
+function getStableTrackId(track: Track): string {
+  let id = trackIdMap.get(track);
+  if (!id) {
+    id = `track-${track.videoId}-${idCounter++}`;
+    trackIdMap.set(track, id);
+  }
+  return id;
+}
+
 const SortableTrackItem: React.FC<SortableTrackItemProps> = ({
   track,
-  index,
+  stableId,
   current,
   isPlaying,
   onPlayTrack,
   onRemoveTrack,
 }) => {
-  const uniqueId = `${track.videoId}-${index}`;
   const {
     attributes,
     listeners,
@@ -60,7 +75,7 @@ const SortableTrackItem: React.FC<SortableTrackItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: uniqueId });
+  } = useSortable({ id: stableId });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -74,7 +89,7 @@ const SortableTrackItem: React.FC<SortableTrackItemProps> = ({
       style={style}
       className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all duration-200 relative select-none ${
         isDragging
-          ? "bg-indigo-500/10 border-indigo-500/50 shadow-lg scale-[1.02] opacity-80"
+          ? "bg-indigo-500/10 border-indigo-500/30 opacity-30 shadow-lg"
           : current
           ? "bg-white/8 border-indigo-500/25 text-white"
           : "bg-[#12151b]/40 border-white/5 text-slate-300 hover:bg-white/5 hover:border-white/10 backdrop-blur-sm"
@@ -153,6 +168,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   onRemoveTrack,
   onClearQueue,
 }) => {
+  const [activeId, setActiveId] = useState<string | null>(null);
   const isCurrent = (track: Track) => currentTrack?.videoId === track.videoId;
 
   const sensors = useSensors(
@@ -163,18 +179,24 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
     })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = queue.findIndex((_, index) => `${queue[index].videoId}-${index}` === active.id);
-      const newIndex = queue.findIndex((_, index) => `${queue[index].videoId}-${index}` === over.id);
+      const oldIndex = queue.findIndex((track) => getStableTrackId(track) === active.id);
+      const newIndex = queue.findIndex((track) => getStableTrackId(track) === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
         onMoveTrack(oldIndex, newIndex);
       }
     }
+    setActiveId(null);
   };
 
-  const sortableItemsIds = queue.map((track, index) => `${track.videoId}-${index}`);
+  const sortableItemsIds = queue.map((track) => getStableTrackId(track));
+  const activeTrack = queue.find((track) => getStableTrackId(track) === activeId);
 
   return (
     <aside className="hidden lg:flex lg:flex-col gap-4 bg-[#0e1015]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.28)] sticky top-6 self-start max-h-[calc(100vh-11.5rem)] w-[320px] shrink-0">
@@ -223,6 +245,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             modifiers={[restrictToVerticalAxis]}
           >
@@ -231,19 +254,59 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-2">
-                {queue.map((track, index) => (
-                  <SortableTrackItem
-                    key={`${track.videoId}-${index}`}
-                    track={track}
-                    index={index}
-                    current={isCurrent(track)}
-                    isPlaying={isPlaying}
-                    onPlayTrack={onPlayTrack}
-                    onRemoveTrack={onRemoveTrack}
-                  />
-                ))}
+                {queue.map((track) => {
+                  const stableId = getStableTrackId(track);
+                  return (
+                    <SortableTrackItem
+                      key={stableId}
+                      stableId={stableId}
+                      track={track}
+                      current={isCurrent(track)}
+                      isPlaying={isPlaying}
+                      onPlayTrack={onPlayTrack}
+                      onRemoveTrack={onRemoveTrack}
+                    />
+                  );
+                })}
               </div>
             </SortableContext>
+
+            {/* Custom Drag Overlay for absolute smooth, flicker-free rendering of the dragged card */}
+            <DragOverlay adjustScale={false}>
+              {activeTrack ? (
+                <div className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-indigo-500/50 bg-[#12151b] text-white shadow-2xl scale-[1.02] opacity-90 select-none">
+                  <span className="text-slate-300 shrink-0 cursor-grabbing p-1 -m-1">
+                    <GripVertical className="w-4 h-4" />
+                  </span>
+
+                  <img
+                    src={activeTrack.thumbnail}
+                    alt={activeTrack.title}
+                    draggable={false}
+                    className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/5 select-none"
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate text-white">
+                      {activeTrack.title}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                      {activeTrack.uploaderName}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 text-slate-400 pr-2">
+                    {activeTrack.duration > 0 && (
+                      <span className="text-[11px] font-mono">
+                        {Math.floor(activeTrack.duration / 60)}:{String(
+                          Math.floor(activeTrack.duration % 60),
+                        ).padStart(2, "0")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </div>
