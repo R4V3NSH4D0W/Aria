@@ -66,6 +66,7 @@ jobs:
 
       - name: Generate release body
         id: release_body
+        shell: bash
         run: |
           body=$(cat .github/release_template.md | sed 's/{{VERSION}}/__VERSION__/g')
           echo "body<<EOF" >> $GITHUB_OUTPUT
