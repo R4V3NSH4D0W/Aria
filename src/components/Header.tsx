@@ -34,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const sortLabels: Record<typeof favoriteSort, string> = {
     recent: "Recently added",
@@ -57,6 +58,15 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "search") {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
+
   return (
     <header
       data-tauri-drag-region
@@ -79,6 +89,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
+                ref={searchInputRef}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search music, artists, albums..."
