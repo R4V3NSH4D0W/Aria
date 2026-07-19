@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { X, Loader2, FileText, Coffee, Moon, Mic } from "lucide-react";
+import { X, Loader2, FileText, Coffee, Moon, Mic, Sliders, RotateCcw } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { Track } from "../types";
 
@@ -47,6 +47,47 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   const [keepAwake, setKeepAwake] = useState(readKeepAwakePreference);
   const [isMouseIdle, setIsMouseIdle] = useState(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const [userOffset, setUserOffset] = useState(0);
+  const [showOffsetPanel, setShowOffsetPanel] = useState(false);
+  const offsetPanelRef = useRef<HTMLDivElement | null>(null);
+
+  // Load offset for current track
+  useEffect(() => {
+    if (!currentTrack?.videoId) return;
+    try {
+      const savedOffsets = localStorage.getItem("aria_lyric_offsets");
+      const offsets = savedOffsets ? JSON.parse(savedOffsets) : {};
+      const songOffset = offsets[currentTrack.videoId];
+      setUserOffset(typeof songOffset === "number" ? songOffset : 0);
+    } catch (e) {
+      console.error("Failed to load lyric offset:", e);
+      setUserOffset(0);
+    }
+  }, [currentTrack?.videoId]);
+
+  // Click outside to close offset panel
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (offsetPanelRef.current && !offsetPanelRef.current.contains(e.target as Node)) {
+        setShowOffsetPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleOffsetChange = (val: number) => {
+    setUserOffset(val);
+    if (!currentTrack?.videoId) return;
+    try {
+      const savedOffsets = localStorage.getItem("aria_lyric_offsets");
+      const offsets = savedOffsets ? JSON.parse(savedOffsets) : {};
+      offsets[currentTrack.videoId] = val;
+      localStorage.setItem("aria_lyric_offsets", JSON.stringify(offsets));
+    } catch (e) {
+      console.error("Failed to save lyric offset:", e);
+    }
+  };
 
   // Time-synced lyrics parser helper
   const parsedLyrics = useMemo(() => {
@@ -246,7 +287,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
     // Snappy lead time offset (approx. 400ms) to ensure highlighted words align with vocal start
     const LYRIC_OFFSET = 0.4;
-    const adjustedProgress = preciseProgress + LYRIC_OFFSET;
+    const adjustedProgress = preciseProgress + LYRIC_OFFSET + userOffset;
 
     let activeIdx = -1;
     for (let i = 0; i < parsedLyrics.lines.length; i++) {
@@ -258,7 +299,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
       }
     }
     return activeIdx;
-  }, [parsedLyrics, preciseProgress]);
+  }, [parsedLyrics, preciseProgress, userOffset]);
 
   // Smooth scroll active line into view
   useEffect(() => {
@@ -273,7 +314,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   if (!show) return null;
 
   const LYRIC_OFFSET = 0.4;
-  const adjustedProgress = preciseProgress + LYRIC_OFFSET;
+  const adjustedProgress = preciseProgress + LYRIC_OFFSET + userOffset;
 
   return (
     <div
@@ -324,6 +365,72 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
             <Mic className="w-4 h-4" />
             <span>{karaokeMode ? "Karaoke On" : "Karaoke"}</span>
           </button>
+          
+          <div className="relative" ref={offsetPanelRef}>
+            <button
+              onClick={() => setShowOffsetPanel(!showOffsetPanel)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                showOffsetPanel || userOffset !== 0
+                  ? "bg-indigo-500/20 border-indigo-400/40 text-indigo-300"
+                  : "bg-white/5 border-white/10 text-slate-300 hover:text-white hover:bg-white/10"
+              }`}
+              title="Adjust lyric offset"
+            >
+              <Sliders className="w-4 h-4" />
+              <span>{userOffset === 0 ? "Sync" : `${userOffset > 0 ? "+" : ""}${userOffset.toFixed(1)}s`}</span>
+            </button>
+            
+            {showOffsetPanel && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-4 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 shadow-2xl z-[80] flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-200">Lyric Sync Offset</span>
+                  {userOffset !== 0 && (
+                    <button
+                      onClick={() => handleOffsetChange(0)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-1 text-[10px] font-semibold cursor-pointer"
+                      title="Reset to 0.0s"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOffsetChange(Math.max(-10, Math.round((userOffset - 0.1) * 10) / 10))}
+                      className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 font-bold transition-all cursor-pointer shrink-0"
+                    >
+                      -0.1s
+                    </button>
+                    <input
+                      type="range"
+                      min="-10"
+                      max="10"
+                      step="0.1"
+                      value={userOffset}
+                      onChange={(e) => handleOffsetChange(parseFloat(e.target.value))}
+                      className="flex-1 h-1.5 bg-white/15 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                    <button
+                      onClick={() => handleOffsetChange(Math.min(10, Math.round((userOffset + 0.1) * 10) / 10))}
+                      className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 font-bold transition-all cursor-pointer shrink-0"
+                    >
+                      +0.1s
+                    </button>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-500 font-semibold px-1">
+                    <span>-10.0s (Delay)</span>
+                    <span>0.0s (Default)</span>
+                    <span>+10.0s (Early)</span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 text-center leading-normal">
+                  Adjust if lyrics are out of sync with vocals. Saved automatically for this song.
+                </div>
+              </div>
+            )}
+          </div>
           <button
             onClick={toggleKeepAwake}
             className={`p-2.5 rounded-full border transition-all cursor-pointer ${
