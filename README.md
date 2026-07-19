@@ -33,7 +33,49 @@ Fast • Native • Beautiful
 
 ## 📸 Screenshots
 
-> Screenshots coming soon.
+<div align="center">
+
+### 🏠 Home
+
+![Home](screenshots/Aria-Home.png)
+
+---
+
+### 🔍 Search
+
+![Search](screenshots/Aria-Search.png)
+
+---
+
+### ❤️ Favorites
+
+![Favorites](screenshots/Aria-Favorites.png)
+
+---
+
+### 🎤 Artist Profile
+
+![Artist Profile](screenshots/Aria-Artist-profile.png)
+
+---
+
+### 📝 Lyrics
+
+![Lyrics](screenshots/Aria-Lyric.png)
+
+---
+
+### 🎤 Karaoke Mode
+
+![Karaoke Mode](screenshots/Aria-Karaoke-mode.png)
+
+---
+
+### 📻 Subscriptions
+
+![Subscriptions](screenshots/Aria-Subscriptions.png)
+
+</div>
 
 ---
 
@@ -62,86 +104,4 @@ Fast • Native • Beautiful
 | macOS (Apple Silicon) | ✅     |
 | Linux                 | ✅     |
 
----
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 22+
-- pnpm
-- Rust
-- Cargo
-
-### Clone
-
-```bash
-git clone https://github.com/<your-username>/Aria.git
-cd Aria
-```
-
-### Install
-
-```bash
-pnpm install
-```
-
-### Development
-
-```bash
-pnpm tauri dev
-```
-
-### Production Build
-
-```bash
-pnpm tauri build
-```
-
-Build output is generated in:
-
-```
-src-tauri/target/release/bundle
-```
-
----
-
-## 📂 Project Structure
-
-```
-.
-├── src
-├── src-tauri
-├── public
-├── docs
-├── package.json
-└── README.md
-```
-
----
-
-## 🎯 Goals
-
-Aria focuses on providing:
-
-- Native desktop performance
-- Low memory usage
-- Smooth user experience
-- Modern interface
-- Cross-platform compatibility
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome.
-
-If you find a bug or have an idea for a new feature, feel free to open an issue or submit a pull request.
-
----
-
-## 📄 License
-
-Licensed under the MIT License.
-
-See the LICENSE file for details.
