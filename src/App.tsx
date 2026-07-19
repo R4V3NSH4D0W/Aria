@@ -28,7 +28,7 @@ import { SavedRadio } from "./types";
 import { startWindowDrag } from "./lib/windowDrag";
 
 export default function App() {
-  const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "https://w.wallhaven.cc/full/gw/wallhaven-gwmj9l.png");
+  const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "https://w.wallhaven.cc/full/6l/wallhaven-6lpkl7.jpg");
   const [wallpaperOpacity, setWallpaperOpacity] = useState(() => {
     const saved = localStorage.getItem("aria_wallpaper_opacity");
     return saved ? parseFloat(saved) : 0.3;
