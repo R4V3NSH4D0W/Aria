@@ -122,6 +122,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <History className="w-7 h-7 text-sky-400" />
                   <span>Recently Played</span>
                 </>
+              ) : activeTab === "settings" ? (
+                <>
+                  <Settings className="w-7 h-7 text-indigo-400" />
+                  <span>Settings</span>
+                </>
               ) : activeTab.startsWith("yt:") ? (
                 <>
                   <ListMusic className="w-7 h-7 text-violet-400" />
