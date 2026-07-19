@@ -105,7 +105,7 @@ export default function App() {
   const { showLyricsMode, setShowLyricsMode, karaokeMode, setKaraokeMode } =
     useKaraoke();
 
-  const { hasUpdate, latestVersion } = useUpdateCheck();
+  const { hasUpdate, latestVersion, releaseBody } = useUpdateCheck();
 
   const [savedRadios, setSavedRadios] = useState<SavedRadio[]>(() => {
     try {
@@ -541,6 +541,7 @@ export default function App() {
                   setWallpaperOpacity={setWallpaperOpacity}
                   hasUpdate={hasUpdate}
                   latestVersion={latestVersion}
+                  releaseBody={releaseBody}
                 />
               ) : (
                 <>

@@ -17,6 +17,7 @@ interface SettingsProps {
   setWallpaperOpacity: (opacity: number) => void;
   hasUpdate?: boolean;
   latestVersion?: string;
+  releaseBody?: string;
 }
 
 type Tab = "account" | "appearance";
@@ -53,6 +54,7 @@ export const Settings: React.FC<SettingsProps> = ({
   setWallpaperOpacity,
   hasUpdate = false,
   latestVersion = "",
+  releaseBody = "",
 }) => {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("account");
@@ -171,7 +173,7 @@ export const Settings: React.FC<SettingsProps> = ({
               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/25 transition-colors shrink-0 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>v{latestVersion.replace(/^v/i, "")} available</span>
+              <span>v{latestVersion.replace(/^[^\d]+/, "")} available</span>
             </button>
           )}
         </div>
@@ -242,7 +244,7 @@ export const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
               <div>
                 <h3 className="text-lg font-bold text-white">
-                  v{latestVersion.replace(/^v/i, "")} Available
+                  v{latestVersion.replace(/^[^\d]+/, "")} Available
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   A new version of Aria is ready to download.
@@ -256,31 +258,57 @@ export const Settings: React.FC<SettingsProps> = ({
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  What's New
-                </h4>
-                <ul className="space-y-2">
-                  {[
-                    "Improved lyrics sync engine with better word-level timing",
-                    "New keep listening grid with +N remaining indicator",
-                    "Karaoke mode now auto-hides controls on inactivity",
-                    "Sidebar auto-closes on narrow windows",
-                    "Settings update checker with release notes",
-                    "Performance improvements and bug fixes",
-                  ].map((item, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm text-slate-300"
-                    >
-                      <span className="text-green-400 mt-0.5 shrink-0">✦</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {releaseBody && (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-1.5 text-sm text-slate-300">
+                    {releaseBody
+                      .split("\n")
+                      .filter(Boolean)
+                      .map((line, i) => {
+                        const trimmed = line.trim();
+                        if (/^#{1,3}\s/.test(trimmed)) {
+                          return (
+                            <p
+                              key={i}
+                              className="text-xs font-semibold text-slate-200 pt-2"
+                            >
+                              {trimmed.replace(/^#+\s*/, "")}
+                            </p>
+                          );
+                        }
+                        if (/^-\s/.test(trimmed)) {
+                          return (
+                            <div key={i} className="flex items-start gap-2">
+                              <span className="text-green-400 mt-0.5 shrink-0">
+                                ✦
+                              </span>
+                              <span>{trimmed.replace(/^-\s*/, "")}</span>
+                            </div>
+                          );
+                        }
+                        if (/^\d+\.\s/.test(trimmed)) {
+                          return (
+                            <div key={i} className="flex items-start gap-2">
+                              <span className="text-green-400 mt-0.5 shrink-0">
+                                {trimmed.match(/^\d+/)?.[0]}.
+                              </span>
+                              <span>{trimmed.replace(/^\d+\.\s*/, "")}</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <p key={i} className="text-slate-300">
+                            {trimmed}
+                          </p>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
               <button
-                onClick={() => openUrl("https://github.com/R4V3NSH4D0W/Aria/releases/latest")}
+                onClick={() =>
+                  openUrl("https://github.com/R4V3NSH4D0W/Aria/releases/latest")
+                }
                 className="block w-full text-center py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm font-semibold hover:bg-indigo-500/30 transition-colors cursor-pointer"
               >
                 View on GitHub

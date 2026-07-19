@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 
 const REPO = "R4V3NSH4D0W/Aria";
-const CURRENT_VERSION = "1.1.4";
 
 function parseTag(tag: string): number[] {
-  return tag.replace(/^v/i, "").split(".").map(Number);
+  return tag.replace(/^[^\d]+/, "").split(".").map(Number);
 }
 
 function isNewer(latest: string, current: string): boolean {
@@ -22,12 +22,14 @@ function isNewer(latest: string, current: string): boolean {
 export function useUpdateCheck() {
   const [hasUpdate, setHasUpdate] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
+  const [releaseBody, setReleaseBody] = useState("");
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
       try {
+        const currentVersion = await getVersion();
         const res = await fetch(
           `https://api.github.com/repos/${REPO}/releases/latest`,
           { headers: { Accept: "application/vnd.github.v3+json" } },
@@ -35,9 +37,11 @@ export function useUpdateCheck() {
         if (!res.ok) return;
         const data = await res.json();
         const tag: string = data.tag_name || "";
+        const body: string = data.body || "";
         if (cancelled) return;
         setLatestVersion(tag);
-        if (tag && isNewer(tag, CURRENT_VERSION)) {
+        setReleaseBody(body);
+        if (tag && isNewer(tag, currentVersion)) {
           setHasUpdate(true);
         }
       } catch {
@@ -50,5 +54,5 @@ export function useUpdateCheck() {
     return () => { cancelled = true; };
   }, []);
 
-  return { hasUpdate, latestVersion, checking };
+  return { hasUpdate, latestVersion, releaseBody, checking };
 }
