@@ -281,6 +281,7 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = ({
                 src={wallpaperUrl}
                 alt=""
                 draggable={false}
+                referrerPolicy="no-referrer"
                 className="h-full w-full object-cover"
                 style={{ opacity: wallpaperOpacity }}
               />

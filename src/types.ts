@@ -3,12 +3,14 @@ export interface Track {
   title: string;
   videoId: string;
   uploaderName: string;
+  artistId?: string;
   duration: number; // in seconds
   thumbnail: string;
   isResolving?: boolean;
   addedAt?: number;
   localPath?: string;
   downloadedAt?: number;
+  artists?: { name: string; id: string | null }[];
 }
 
 export interface ArtistItem {
@@ -20,11 +22,19 @@ export interface ArtistItem {
 }
 
 export interface ArtistDetails {
+  browseId: string;
   name: string;
   thumbnail: string;
   description?: string;
   subscribers?: string;
   songs: Track[];
+}
+
+export interface FavoriteArtist {
+  browseId: string;
+  name: string;
+  thumbnail: string;
+  isPinned?: boolean;
 }
 
 export type SearchResultItem = Track | ArtistItem;

@@ -55,7 +55,8 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     const timeRegex = /^\[(\d+):(\d+)(?:\.(\d+))?\](.*)/;
     let isSynced = false;
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const match = timeRegex.exec(line.trim());
       if (match) {
         isSynced = true;
@@ -65,41 +66,62 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
         const milliseconds = parseInt(msStr.padEnd(3, "0").slice(0, 3), 10);
 
         const time = minutes * 60 + seconds + milliseconds / 1000;
-        const text = match[4].trim();
+        let text = match[4].trim();
 
-        // Parse Enhanced LRC word timestamps like <00:12.30> word
-        const wordRegex = /<(\d+):(\d+)(?:\.(\d+))?>([^<]*)/g;
-        const words: Word[] = [];
-        let wordMatch;
-        let cleanText = "";
+        // Strip Metrolist markup tags {agent:...} or {bg}
+        text = text.replace(/\{agent:[^}]+\}/g, "").replace(/\{bg\}/g, "").trim();
 
-        while ((wordMatch = wordRegex.exec(text)) !== null) {
-          const wMin = parseInt(wordMatch[1], 10);
-          const wSec = parseInt(wordMatch[2], 10);
-          const wMsStr = wordMatch[3] || "0";
-          const wMs = parseInt(wMsStr.padEnd(3, "0").slice(0, 3), 10);
-          const wTime = wMin * 60 + wSec + wMs / 1000;
-          const wText = wordMatch[4].trim();
+        let words: Word[] = [];
 
-          if (wText) {
-            words.push({ text: wText, time: wTime });
-            cleanText += (cleanText ? " " : "") + wText;
+        // Check if next line is a Metrolist-style word-timing line: <Word1:start:end|Word2:start:end>
+        const nextLine = lines[i + 1]?.trim();
+        if (nextLine && nextLine.startsWith("<") && nextLine.endsWith(">")) {
+          const content = nextLine.slice(1, -1);
+          const tokens = content.split("|");
+          for (const token of tokens) {
+            const parts = token.split(":");
+            if (parts.length >= 3) {
+              const wText = parts.slice(0, -2).join(":");
+              const wTime = parseFloat(parts[parts.length - 2]) || 0;
+              if (wText) {
+                words.push({ text: wText, time: wTime });
+              }
+            }
           }
-        }
+          i++; // Skip the word-timing line
+        } else {
+          // Fallback: Parse inline Enhanced LRC word timestamps like <00:12.30> word
+          const wordRegex = /<(\d+):(\d+)(?:\.(\d+))?>([^<]*)/g;
+          let wordMatch;
+          let cleanText = "";
 
-        // If no word tags are found, use the plain text
-        if (words.length === 0) {
-          cleanText = text;
+          while ((wordMatch = wordRegex.exec(text)) !== null) {
+            const wMin = parseInt(wordMatch[1], 10);
+            const wSec = parseInt(wordMatch[2], 10);
+            const wMsStr = wordMatch[3] || "0";
+            const wMs = parseInt(wMsStr.padEnd(3, "0").slice(0, 3), 10);
+            const wTime = wMin * 60 + wSec + wMs / 1000;
+            const wText = wordMatch[4].trim();
+
+            if (wText) {
+              words.push({ text: wText, time: wTime });
+              cleanText += (cleanText ? " " : "") + wText;
+            }
+          }
+
+          if (words.length > 0) {
+            text = cleanText;
+          }
         }
 
         parsedLines.push({
           time,
-          text: cleanText,
+          text,
           words: words.length > 0 ? words : undefined,
         });
       } else {
         const text = line.trim();
-        if (text) {
+        if (text && !(text.startsWith("<") && text.endsWith(">"))) {
           parsedLines.push({
             time: parsedLines.length > 0 ? parsedLines[parsedLines.length - 1].time : 0,
             text,

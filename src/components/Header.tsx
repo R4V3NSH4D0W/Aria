@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Search, Heart, ListMusic, History, Settings, Menu } from "lucide-react";
+import { ChevronDown, Search, Heart, ListMusic, History, Settings, Menu, Users } from "lucide-react";
 import { Playlist, SavedRadio } from "../types";
 import { startWindowDrag } from "../lib/windowDrag";
 
@@ -82,19 +82,29 @@ export const Header: React.FC<HeaderProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search music, artists, albums..."
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-[#12151b] border border-white/5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-slate-700 transition-all"
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-black/25 backdrop-blur-sm border border-white/5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-slate-700 transition-all"
               />
             </div>
           </form>
         ) : (
           <div className="flex items-center justify-between gap-4 flex-1">
             <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-              {activeTab === "home" ? (
+              {activeTab === "artist-profile" ? (
+                <>
+                  <Users className="w-7 h-7 text-indigo-400 fill-indigo-500/10" />
+                  <span>Artist Profile</span>
+                </>
+              ) : activeTab === "home" ? (
                 <span>Home</span>
               ) : activeTab === "favorites" ? (
                 <>
                   <Heart className="w-7 h-7 text-pink-500 fill-pink-500/20" />
                   <span>Favorite Songs</span>
+                </>
+              ) : activeTab === "favorite-artists" ? (
+                <>
+                  <Users className="w-7 h-7 text-pink-500 fill-pink-500/20" />
+                  <span>Subscriptions</span>
                 </>
               ) : activeTab === "recently-played" ? (
                 <>

@@ -72,37 +72,125 @@ fn build_sapisid_hash(cookie: &str) -> Option<String> {
     Some(format!("SAPISIDHASH {}_{}", ts, hex))
 }
 
-fn extract_artist_from_runs(runs: &Vec<Value>) -> String {
-    // 1. Try to find a run linked to an artist/channel page (browseId starting with UC or FEs)
-    for run in runs {
-        if let Some(browse_id) = run.pointer("/navigationEndpoint/browseEndpoint/browseId").and_then(|v| v.as_str()) {
-            if browse_id.starts_with("UC") || browse_id.starts_with("FEs") {
-                if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
-                    return text.trim().to_string();
-                }
+
+fn is_metadata_text(text: &str) -> bool {
+    let value = text.trim();
+    if value.is_empty() {
+        return true;
+    }
+    let lower = value.to_lowercase().replace("\u{a0}", " ");
+    
+    if is_duration_text(value) {
+        return true;
+    }
+    
+    // Check 4-digit year
+    if value.len() == 4 && value.chars().all(|c| c.is_ascii_digit()) {
+        if let Ok(year) = value.parse::<i32>() {
+            if year >= 1900 && year <= 2099 {
+                return true;
             }
         }
     }
+    
+    // Check known metadata words
+    let metadata_words = ["song", "video", "single", "album", "episode", "playlist", "podcast", "artist"];
+    if metadata_words.contains(&lower.as_str()) {
+        return true;
+    }
+    
+    if lower.contains("monthly audience") {
+        return true;
+    }
+    
+    // Check views/plays/likes/subscribers counts
+    let suffix_words = ["view", "views", "play", "plays", "like", "likes", "subscriber", "subscribers", "follower", "followers", "song", "songs", "track", "tracks"];
+    for suffix in &suffix_words {
+        if lower.ends_with(suffix) {
+            let num_part = lower.trim_end_matches(suffix).trim();
+            let is_num = num_part.chars().all(|c| c.is_ascii_digit() || c == '.' || c == ',' || c == 'k' || c == 'm' || c == 'b');
+            if is_num && !num_part.is_empty() {
+                return true;
+            }
+        }
+    }
+    
+    false
+}
 
-    // 2. Fallback: filter out types, delimiters, and duration indicators
+fn extract_artist_from_runs(runs: &Vec<Value>) -> (String, Option<String>, Vec<Value>) {
+    let mut groups = Vec::new();
+    let mut current_group = Vec::new();
+    
     for run in runs {
         if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
-            let t_trimmed = text.trim();
-            if t_trimmed != "•" 
-                && t_trimmed != "·" 
-                && t_trimmed != ","
-                && t_trimmed != "Song" 
-                && t_trimmed != "Video" 
-                && t_trimmed != "Album"
-                && !t_trimmed.contains(':')
-                && !t_trimmed.chars().all(char::is_numeric)
-            {
-                return t_trimmed.to_string();
+            let trimmed = text.trim();
+            if trimmed == "•" || trimmed == "·" {
+                if !current_group.is_empty() {
+                    groups.push(current_group);
+                    current_group = Vec::new();
+                }
+            } else {
+                current_group.push(run);
             }
         }
     }
+    if !current_group.is_empty() {
+        groups.push(current_group);
+    }
+    
+    // Look for the first group that does not contain only metadata text
+    let mut artists_list = Vec::new();
+    for group in groups {
+        let is_all_metadata = group.iter().all(|run| {
+            if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
+                is_metadata_text(text)
+            } else {
+                true
+            }
+        });
+        
+        if !is_all_metadata {
+            for run in group {
+                if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
+                    let trimmed = text.trim();
+                    if trimmed.is_empty() || trimmed == "&" || trimmed == "," || trimmed.to_lowercase() == "feat." || trimmed.to_lowercase() == "featuring" {
+                        continue;
+                    }
+                    let browse_id = run.pointer("/navigationEndpoint/browseEndpoint/browseId")
+                        .and_then(|v| v.as_str())
+                        .filter(|id| id.starts_with("UC") || id.starts_with("FE"))
+                        .map(|id| id.to_string());
+                    
+                    artists_list.push(serde_json::json!({
+                        "name": trimmed,
+                        "id": browse_id
+                    }));
+                }
+            }
+            break;
+        }
+    }
 
-    "Unknown Artist".to_string()
+    let mut uploader_name = String::new();
+    for (i, art) in artists_list.iter().enumerate() {
+        if i > 0 {
+            uploader_name.push_str(" & ");
+        }
+        if let Some(name) = art.get("name").and_then(|n| n.as_str()) {
+            uploader_name.push_str(name);
+        }
+    }
+
+    if uploader_name.is_empty() {
+        uploader_name = "Unknown Artist".to_string();
+    }
+
+    let primary_id = artists_list.first()
+        .and_then(|art| art.get("id").and_then(|id| id.as_str()))
+        .map(|id| id.to_string());
+
+    (uploader_name, primary_id, artists_list)
 }
 
 fn extract_thumbnail(item_renderer: &Value) -> String {
@@ -365,10 +453,15 @@ fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Valu
 
     // Extract artist name robustly matching Metrolist logic
     let mut artist = "Unknown Artist".to_string();
+    let mut artist_id = None;
+    let mut artists_list = serde_json::json!([]);
     if let Some(runs) = item_renderer.pointer("/flexColumns/1/musicResponsiveListItemFlexColumnRenderer/text/runs")
         .or_else(|| item_renderer.pointer("/subtitle/runs"))
         .and_then(|r| r.as_array()) {
-        artist = extract_artist_from_runs(runs);
+        let (name, id, list) = extract_artist_from_runs(runs);
+        artist = name;
+        artist_id = id;
+        artists_list = serde_json::Value::Array(list);
     }
 
     let thumbnail = extract_thumbnail(item_renderer);
@@ -379,6 +472,8 @@ fn extract_track_from_renderer(item_renderer: &Value) -> Option<serde_json::Valu
         "title": title,
         "videoId": video_id,
         "uploaderName": artist,
+        "artistId": artist_id,
+        "artists": artists_list,
         "duration": duration_secs,
         "thumbnail": thumbnail
     }))
@@ -522,15 +617,15 @@ async fn get_yt_home() -> Result<Vec<Value>, String> {
 }
 
 #[tauri::command]
-async fn search_yt_direct(query: String) -> Result<Vec<Value>, String> {
-    println!("search_yt_direct query: {}", query);
+async fn search_yt_direct(query: String, params: Option<String>) -> Result<Vec<Value>, String> {
+    println!("search_yt_direct query: {}, params: {:?}", query, params);
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| e.to_string())?;
 
     // Prepare payload context matching Metrolist WEB_REMIX client
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "context": {
             "client": {
                 "clientName": "WEB_REMIX",
@@ -541,6 +636,12 @@ async fn search_yt_direct(query: String) -> Result<Vec<Value>, String> {
         },
         "query": query
     });
+
+    if let Some(p) = params {
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("params".to_string(), serde_json::Value::String(p));
+        }
+    }
 
     let mut req = client.post("https://music.youtube.com/youtubei/v1/search")
         .json(&payload)
@@ -854,6 +955,7 @@ async fn get_yt_artist(browse_id: String) -> Result<Value, String> {
     }
 
     Ok(serde_json::json!({
+        "browseId": browse_id,
         "name": name,
         "thumbnail": thumbnail,
         "description": description,
@@ -1177,10 +1279,15 @@ fn parse_playlist_panel_video_renderer(r: &Value) -> Option<Value> {
         .to_string();
     
     let mut artist = "Unknown Artist".to_string();
+    let mut artist_id = None;
+    let mut artists_list = serde_json::json!([]);
     if let Some(runs) = r.pointer("/longBylineText/runs")
         .or_else(|| r.pointer("/shortBylineText/runs"))
         .and_then(|runs| runs.as_array()) {
-        artist = extract_artist_from_runs(runs);
+        let (name, id, list) = extract_artist_from_runs(runs);
+        artist = name;
+        artist_id = id;
+        artists_list = serde_json::Value::Array(list);
     }
     
     let thumbnail = r.pointer("/thumbnail/thumbnails/0/url")
@@ -1203,6 +1310,8 @@ fn parse_playlist_panel_video_renderer(r: &Value) -> Option<Value> {
         "title": title,
         "videoId": video_id,
         "uploaderName": artist,
+        "artistId": artist_id,
+        "artists": artists_list,
         "duration": duration_secs,
         "thumbnail": thumbnail
     }))

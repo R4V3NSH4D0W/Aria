@@ -10,8 +10,9 @@ import {
   Home,
   CloudLightning,
   Radio,
+  Users,
 } from "lucide-react";
-import { Playlist } from "../types";
+import { Playlist, FavoriteArtist } from "../types";
 import { startWindowDrag } from "../lib/windowDrag";
 
 interface SidebarProps {
@@ -22,6 +23,8 @@ interface SidebarProps {
   setShowCreatePlaylistModal: (show: boolean) => void;
   hasPlayer?: boolean;
   isOpen?: boolean;
+  loadArtist: (browseId: string) => void;
+  favoriteArtists: FavoriteArtist[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -32,7 +35,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setShowCreatePlaylistModal,
   hasPlayer = false,
   isOpen = true,
+  loadArtist,
+  favoriteArtists,
 }) => {
+  const pinnedArtists = favoriteArtists.filter((a) => a.isPinned);
   const hasYtCookie = !!localStorage.getItem("aria_yt_cookie");
 
   return (
@@ -136,6 +142,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Radio className="w-4 h-4 text-violet-400 shrink-0" />
             {isOpen && <span>YouTube Radios</span>}
           </button>
+
+          <button
+            onClick={() => setActiveTab("favorite-artists")}
+            className={`flex items-center gap-3 ${isOpen ? "justify-start px-4" : "justify-center px-0"} py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm border cursor-pointer ${
+              activeTab === "favorite-artists"
+                ? "bg-white/5 text-white border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
+            }`}
+            title={!isOpen ? "Subscriptions" : undefined}
+          >
+            <Users className="w-4 h-4 text-pink-300 shrink-0" />
+            {isOpen && <span>Subscriptions</span>}
+          </button>
         </nav>
       </div>
 
@@ -143,6 +162,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* ── Scrollable playlists area ── */}
       <div className={`flex-1 overflow-y-auto ${isOpen ? "px-3 lg:px-6" : "px-2"} py-4 flex flex-col gap-5 min-h-0 ${hasPlayer ? "pb-36" : "pb-4"}`}>
+
+        {/* Pinned Artists */}
+        {pinnedArtists.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <div className={`flex items-center ${isOpen ? "justify-between px-1" : "justify-center"} mb-1`}>
+              {isOpen && (
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                  Pinned Artists
+                </span>
+              )}
+            </div>
+            {pinnedArtists.map((artist) => (
+              <button
+                key={artist.browseId}
+                onClick={() => loadArtist(artist.browseId)}
+                className={`group flex items-center ${isOpen ? "justify-start px-3 gap-3" : "justify-center px-0"} py-2 rounded-xl text-left transition-all duration-200 text-sm cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-white/5`}
+                title={!isOpen ? artist.name : undefined}
+              >
+                <img
+                  src={artist.thumbnail}
+                  alt={artist.name}
+                  className="w-5 h-5 rounded-full object-cover shrink-0 border border-white/10 shadow-sm"
+                />
+                {isOpen && <span className="truncate font-medium">{artist.name}</span>}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Local Playlists */}
         <div className="flex flex-col gap-1">

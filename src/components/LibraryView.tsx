@@ -24,6 +24,7 @@ interface LibraryViewProps {
   downloadingTrackIds?: Set<string>;
   downloadTrack?: (track: Track) => void;
   deleteDownload?: (videoId: string) => void;
+  loadArtist?: (browseId: string) => void;
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -47,6 +48,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   downloadingTrackIds,
   downloadTrack,
   deleteDownload,
+  loadArtist,
 }) => {
   const isLocalContext = activeTab === "favorites" || activeTab.startsWith("yt:RD") || (activeTab !== "recently-played" && !activeTab.startsWith("yt:"));
 
@@ -151,6 +153,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             removeTrackFromPlaylist={removeTrackFromPlaylist}
             playTrack={playTrack}
             setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            loadArtist={loadArtist}
             downloads={downloads}
             downloadingTrackIds={downloadingTrackIds}
             downloadTrack={downloadTrack}

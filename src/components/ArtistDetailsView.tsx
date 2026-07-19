@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { ArrowLeft, Play, Shuffle, Users, Music, Disc } from "lucide-react";
-import { ArtistDetails, Track, Playlist } from "../types";
+import { ArrowLeft, Play, Shuffle, Users, Music, Disc, Check, UserPlus } from "lucide-react";
+import { ArtistDetails, Track, Playlist, FavoriteArtist } from "../types";
 import { TrackItem } from "./TrackItem";
 
 interface ArtistDetailsViewProps {
@@ -19,6 +19,9 @@ interface ArtistDetailsViewProps {
   toggleFavorite: (track: Track) => void;
   isFavorite: (track: Track) => boolean;
   setShowCreatePlaylistModal: (show: boolean) => void;
+  loadArtist?: (browseId: string) => void;
+  favoriteArtists: FavoriteArtist[];
+  toggleFavoriteArtist: (artist: { browseId: string; name: string; thumbnail: string }) => void;
 }
 
 export const ArtistDetailsView: React.FC<ArtistDetailsViewProps> = ({
@@ -36,6 +39,9 @@ export const ArtistDetailsView: React.FC<ArtistDetailsViewProps> = ({
   toggleFavorite,
   isFavorite,
   setShowCreatePlaylistModal,
+  loadArtist,
+  favoriteArtists,
+  toggleFavoriteArtist,
 }) => {
   const [showFullBio, setShowFullBio] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -43,21 +49,15 @@ export const ArtistDetailsView: React.FC<ArtistDetailsViewProps> = ({
   return (
     <div className="flex-1 flex flex-col gap-6 pb-36 select-none animate-in fade-in slide-in-from-bottom-4 duration-300">
       {/* Header Back Navigation */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <button
           onClick={onBack}
           className="p-2.5 rounded-xl border border-white/5 bg-[#12151b] text-slate-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer flex items-center justify-center shadow-md"
+          title="Back"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Back to search
-          </span>
-          <h3 className="text-lg font-bold text-white leading-none mt-0.5">
-            Artist Profile
-          </h3>
-        </div>
+        <span className="text-sm font-semibold text-slate-400">Back</span>
       </div>
 
       {/* Immersive Artist Banner */}
@@ -122,6 +122,31 @@ export const ArtistDetailsView: React.FC<ArtistDetailsViewProps> = ({
                 <Shuffle className="w-4 h-4 text-indigo-400" />
                 <span>Shuffle</span>
               </button>
+              <button
+                onClick={() => toggleFavoriteArtist({
+                  browseId: artist.browseId,
+                  name: artist.name,
+                  thumbnail: artist.thumbnail
+                })}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-sm transition-all duration-300 cursor-pointer hover:-translate-y-0.5 ${
+                  favoriteArtists.some((a) => a.browseId === artist.browseId)
+                    ? "bg-white/5 border-white/5 text-slate-500 hover:text-slate-400"
+                    : "bg-indigo-600/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20 hover:border-indigo-500/30"
+                }`}
+                title={favoriteArtists.some((a) => a.browseId === artist.browseId) ? "Unsubscribe from Artist" : "Subscribe to Artist"}
+              >
+                {favoriteArtists.some((a) => a.browseId === artist.browseId) ? (
+                  <>
+                    <Check className="w-4 h-4 text-slate-500" />
+                    <span>Subscribed</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 text-indigo-400" />
+                    <span>Subscribe</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
@@ -159,6 +184,7 @@ export const ArtistDetailsView: React.FC<ArtistDetailsViewProps> = ({
                 removeTrackFromPlaylist={() => {}}
                 playTrack={playTrack}
                 setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                loadArtist={loadArtist}
               />
             );
           })}

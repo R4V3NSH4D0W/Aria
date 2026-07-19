@@ -28,6 +28,7 @@ interface PlayerProps {
   setShowCreatePlaylistModal: (show: boolean) => void;
   showLyricsMode: boolean;
   setShowLyricsMode: (show: boolean) => void;
+  loadArtist?: (browseId: string) => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -55,6 +56,7 @@ export const Player: React.FC<PlayerProps> = ({
   setShowCreatePlaylistModal,
   showLyricsMode,
   setShowLyricsMode,
+  loadArtist,
 }) => {
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
   const playlistMenuRef = useRef<HTMLDivElement | null>(null);
@@ -92,7 +94,30 @@ export const Player: React.FC<PlayerProps> = ({
         </div>
         <div className="min-w-0 flex-1">
           <h4 className="font-bold text-xs lg:text-sm truncate text-white">{currentTrack.title}</h4>
-          <p className="text-[10px] lg:text-xs text-slate-400 truncate mt-0.5">{currentTrack.uploaderName}</p>
+          <p className="text-[10px] lg:text-xs text-slate-400 truncate mt-0.5">
+            {currentTrack.artists && currentTrack.artists.length > 0 && loadArtist ? (
+              currentTrack.artists.map((artist, idx) => (
+                <React.Fragment key={idx}>
+                  {idx > 0 && " & "}
+                  <span
+                    onClick={() => loadArtist(artist.id || artist.name)}
+                    className="hover:underline hover:text-indigo-400 cursor-pointer transition-colors"
+                  >
+                    {artist.name}
+                  </span>
+                </React.Fragment>
+              ))
+            ) : currentTrack.uploaderName && loadArtist ? (
+              <span
+                onClick={() => loadArtist(currentTrack.artistId || currentTrack.uploaderName)}
+                className="hover:underline hover:text-indigo-400 cursor-pointer transition-colors"
+              >
+                {currentTrack.uploaderName}
+              </span>
+            ) : (
+              currentTrack.uploaderName
+            )}
+          </p>
         </div>
         <button
           onClick={() => toggleFavorite(currentTrack)}

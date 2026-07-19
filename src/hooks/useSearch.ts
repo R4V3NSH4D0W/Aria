@@ -48,6 +48,7 @@ export function useSearch({ setActiveTab }: UseSearchProps) {
       try {
         const results = await invoke<SearchResultItem[]>("search_yt_direct", {
           query,
+          params: null,
         });
         if (results && results.length > 0) {
           const resolved = await Promise.all(
@@ -81,6 +82,7 @@ export function useSearch({ setActiveTab }: UseSearchProps) {
       try {
         const results = await invoke<SearchResultItem[]>("search_yt_direct", {
           query: `${genre} Music`,
+          params: null,
         });
         if (results && results.length > 0) {
           const resolved = await Promise.all(

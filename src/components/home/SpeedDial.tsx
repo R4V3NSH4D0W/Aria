@@ -1,5 +1,4 @@
-import React from "react";
-import { Grid2X2, Heart, History, ListMusic } from "lucide-react";
+import { Grid2X2, Heart, History, ListMusic, Radio } from "lucide-react";
 import { Track, Playlist } from "../../types";
 
 interface SpeedDialProps {
@@ -7,6 +6,8 @@ interface SpeedDialProps {
   recentlyPlayed: Track[];
   playlists: Playlist[];
   onOpenTab: (tab: string) => void;
+  subscriptionMixTracks?: Track[];
+  playSongs?: (songs: Track[], shuffle: boolean) => void;
 }
 
 export const SpeedDial: React.FC<SpeedDialProps> = ({
@@ -14,6 +15,8 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
   recentlyPlayed,
   playlists,
   onOpenTab,
+  subscriptionMixTracks = [],
+  playSongs,
 }) => {
   const renderCover = (tracks: Track[], fallbackIcon: React.ReactNode) => {
     if (tracks.length === 0) {
@@ -91,6 +94,31 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
             {favorites.length} songs
           </p>
         </button>
+
+        {/* Subscription Mix Card */}
+        {subscriptionMixTracks && subscriptionMixTracks.length > 0 && playSongs && (
+          <button
+            onClick={() => playSongs(subscriptionMixTracks, true)}
+            className="flex-none w-48 text-left transition-all hover:scale-[1.02] group cursor-pointer"
+          >
+            <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-md bg-linear-to-br from-indigo-500/10 to-violet-500/5 mb-3 flex items-center justify-center border border-white/5">
+              {renderCover(
+                subscriptionMixTracks,
+                <Radio className="w-8 h-8 text-indigo-400" />,
+              )}
+              {/* Corner Type Badge */}
+              <div className="absolute top-2 right-2 rounded-lg bg-black/60 backdrop-blur-xs p-1.5 text-indigo-400 border border-white/5">
+                <Radio className="w-3.5 h-3.5 animate-pulse" />
+              </div>
+            </div>
+            <h3 className="font-semibold text-sm text-white group-hover:text-indigo-400 transition-colors truncate">
+              Subscription Mix
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {subscriptionMixTracks.length} tracks • Mix
+            </p>
+          </button>
+        )}
 
         {/* Recently Played Card */}
         <button

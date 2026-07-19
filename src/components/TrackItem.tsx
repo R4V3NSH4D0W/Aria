@@ -33,6 +33,7 @@ interface TrackItemProps {
   downloadingTrackIds?: Set<string>;
   downloadTrack?: (track: Track) => void;
   deleteDownload?: (videoId: string) => void;
+  loadArtist?: (browseId: string) => void;
 }
 
 export const TrackItem: React.FC<TrackItemProps> = ({
@@ -54,6 +55,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({
   downloadingTrackIds,
   downloadTrack,
   deleteDownload,
+  loadArtist,
 }) => {
   const isDownloaded = downloads?.some((t) => t.videoId === track.videoId) || !!track.localPath;
   const isDownloading = downloadingTrackIds?.has(track.videoId);
@@ -103,7 +105,34 @@ export const TrackItem: React.FC<TrackItemProps> = ({
         <div className="min-w-0">
           <h4 className="font-semibold text-sm truncate pr-2">{track.title}</h4>
           <p className="text-xs text-slate-400 truncate mt-0.5">
-            {track.uploaderName}
+            {track.artists && track.artists.length > 0 && loadArtist ? (
+              track.artists.map((artist, idx) => (
+                <React.Fragment key={idx}>
+                  {idx > 0 && " & "}
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      loadArtist(artist.id || artist.name);
+                    }}
+                    className="hover:underline hover:text-indigo-400 cursor-pointer transition-colors"
+                  >
+                    {artist.name}
+                  </span>
+                </React.Fragment>
+              ))
+            ) : track.uploaderName && loadArtist ? (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  loadArtist(track.artistId || track.uploaderName);
+                }}
+                className="hover:underline hover:text-indigo-400 cursor-pointer transition-colors"
+              >
+                {track.uploaderName}
+              </span>
+            ) : (
+              track.uploaderName
+            )}
           </p>
         </div>
       </div>

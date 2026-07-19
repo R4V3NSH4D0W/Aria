@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { AlertCircle, WifiOff } from "lucide-react";
-import { Track } from "./types";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Track, FavoriteArtist } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { ArtistDetailsView } from "./components/ArtistDetailsView";
@@ -22,6 +23,7 @@ import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 import { YtRadiosView } from "./components/YtRadiosView";
+import { FavoriteArtistsView } from "./components/FavoriteArtistsView";
 import { SavedRadio } from "./types";
 import { startWindowDrag } from "./lib/windowDrag";
 
@@ -88,21 +90,31 @@ export default function App() {
   };
 
   const [showLyricsMode, setShowLyricsMode] = useState(false);
-  const [karaokeMode, setKaraokeMode] = useState(() => {
-    const key = "aria_lyrics_karaoke";
-    const saved = localStorage.getItem(key);
-    // Default: karaoke off. Persist so preference is always explicit.
-    if (saved === null) {
-      localStorage.setItem(key, "false");
-      return false;
-    }
-    return saved === "true";
-  });
+  const [karaokeMode, setKaraokeMode] = useState(false);
 
-  const handleKaraokeModeChange = (value: boolean) => {
-    setKaraokeMode(value);
-    localStorage.setItem("aria_lyrics_karaoke", String(value));
-  };
+  // Manage Tauri window fullscreen state for Karaoke mode
+  useEffect(() => {
+    const syncFullscreen = async () => {
+      try {
+        const appWindow = getCurrentWindow();
+        if (showLyricsMode && karaokeMode) {
+          await appWindow.setFullscreen(true);
+        } else {
+          await appWindow.setFullscreen(false);
+        }
+      } catch (err) {
+        console.error("Failed to sync fullscreen state:", err);
+      }
+    };
+    syncFullscreen();
+  }, [showLyricsMode, karaokeMode]);
+
+  // Turn off karaoke mode when lyrics overlay is closed
+  useEffect(() => {
+    if (!showLyricsMode) {
+      setKaraokeMode(false);
+    }
+  }, [showLyricsMode]);
   const [savedRadios, setSavedRadios] = useState<SavedRadio[]>(() => {
     try {
       const saved = localStorage.getItem("aria_saved_radios");
@@ -115,6 +127,36 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("aria_saved_radios", JSON.stringify(savedRadios));
   }, [savedRadios]);
+
+  const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtist[]>(() => {
+    try {
+      const saved = localStorage.getItem("aria_favorite_artists");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("aria_favorite_artists", JSON.stringify(favoriteArtists));
+  }, [favoriteArtists]);
+
+  const toggleFavoriteArtist = (artist: { browseId: string; name: string; thumbnail: string }) => {
+    setFavoriteArtists((prev) => {
+      const exists = prev.some((a) => a.browseId === artist.browseId);
+      if (exists) {
+        return prev.filter((a) => a.browseId !== artist.browseId);
+      } else {
+        return [...prev, artist];
+      }
+    });
+  };
+
+  const togglePinArtist = (browseId: string) => {
+    setFavoriteArtists((prev) =>
+      prev.map((a) => (a.browseId === browseId ? { ...a, isPinned: !a.isPinned } : a))
+    );
+  };
 
   const deleteSavedRadio = (radioId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -181,6 +223,7 @@ export default function App() {
     loading: homeLoading,
     error: homeError,
     fetchHome,
+    subscriptionMix,
   } = useHome();
 
   const {
@@ -363,6 +406,7 @@ export default function App() {
           src={wallpaperUrl}
           alt=""
           draggable={false}
+          referrerPolicy="no-referrer"
           className="absolute inset-0 h-full w-full object-cover pointer-events-none z-0 transition-opacity duration-500"
           style={{ opacity: wallpaperOpacity }}
         />
@@ -402,7 +446,7 @@ export default function App() {
 
       <div className="flex flex-1 overflow-hidden z-10">
         <Sidebar
-          activeTab={activeTab}
+          activeTab={selectedArtist || artistLoading ? "artist-profile" : activeTab}
           setActiveTab={handleTabChange}
           playlists={playlists}
           deletePlaylist={(id, e) => {
@@ -412,6 +456,8 @@ export default function App() {
           setShowCreatePlaylistModal={setShowCreatePlaylistModal}
           hasPlayer={!!currentTrack}
           isOpen={isSidebarOpen}
+          favoriteArtists={favoriteArtists}
+          loadArtist={loadArtist}
         />
 
         {/* Main Content Area */}
@@ -419,7 +465,7 @@ export default function App() {
           className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? "pb-36" : ""}`}
         >
           <Header
-            activeTab={activeTab}
+            activeTab={selectedArtist || artistLoading ? "artist-profile" : activeTab}
             playlists={playlists}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -463,6 +509,9 @@ export default function App() {
                   toggleFavorite={toggleFavorite}
                   isFavorite={isFavorite}
                   setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                  loadArtist={loadArtist}
+                  favoriteArtists={favoriteArtists}
+                  toggleFavoriteArtist={toggleFavoriteArtist}
                 />
               ) : activeTab === "home" ? (
                 <Home
@@ -482,6 +531,7 @@ export default function App() {
                   communityPlaylists={communityPlaylists}
                   communityLoading={communityLoading}
                   fetchExplore={fetchExplore}
+                  subscriptionMix={subscriptionMix}
                 />
               ) : activeTab === "settings" ? (
                 <Settings
@@ -539,6 +589,13 @@ export default function App() {
                       onDeleteRadio={deleteSavedRadio}
                       onRenameRadio={renameSavedRadio}
                     />
+                  ) : activeTab === "favorite-artists" ? (
+                    <FavoriteArtistsView
+                      favoriteArtists={favoriteArtists}
+                      onSelectArtist={(id) => loadArtist(id)}
+                      onUnfavoriteArtist={toggleFavoriteArtist}
+                      onTogglePin={togglePinArtist}
+                    />
                   ) : ytPlaylistLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
                       <div className="w-10 h-10 border-2 border-white/10 border-t-violet-500 rounded-full animate-spin -translate-y-5" />
@@ -563,6 +620,7 @@ export default function App() {
                       isFavorite={isFavorite}
                       removeTrackFromPlaylist={removeTrackFromPlaylist}
                       setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                      loadArtist={loadArtist}
                       downloads={downloads}
                       downloadingTrackIds={downloadingTrackIds}
                       downloadTrack={downloadTrack}
@@ -617,6 +675,7 @@ export default function App() {
             setShowCreatePlaylistModal={setShowCreatePlaylistModal}
             showLyricsMode={showLyricsMode}
             setShowLyricsMode={setShowLyricsMode}
+            loadArtist={loadArtist}
           />
         </div>
       )}
@@ -631,7 +690,7 @@ export default function App() {
           lyricsLoading={lyricsLoading}
           audioRef={audioRef}
           karaokeMode={karaokeMode}
-          setKaraokeMode={handleKaraokeModeChange}
+          setKaraokeMode={setKaraokeMode}
         />
       )}
 

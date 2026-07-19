@@ -147,6 +147,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
             removeTrackFromPlaylist={removeTrackFromPlaylist}
             playTrack={playTrack}
             setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            loadArtist={loadArtist}
             downloads={downloads}
             downloadingTrackIds={downloadingTrackIds}
             downloadTrack={downloadTrack}

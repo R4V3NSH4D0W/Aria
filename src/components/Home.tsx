@@ -31,6 +31,7 @@ interface HomeProps {
   communityPlaylists: CommunityPlaylist[];
   communityLoading: boolean;
   fetchExplore: () => void;
+  subscriptionMix?: Track[];
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -50,6 +51,7 @@ export const Home: React.FC<HomeProps> = ({
   communityPlaylists,
   communityLoading,
   fetchExplore,
+  subscriptionMix = [],
 }) => {
   useEffect(() => {
     fetchHome();
@@ -88,6 +90,8 @@ export const Home: React.FC<HomeProps> = ({
           recentlyPlayed={recentlyPlayed}
           playlists={playlists}
           onOpenTab={onOpenTab}
+          subscriptionMixTracks={subscriptionMix}
+          playSongs={playSongs}
         />
 
         {/* Recently Played / Keep Listening Shelf */}
