@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search, Heart, ListMusic, History, Settings, Menu } from "lucide-react";
 import { Playlist, SavedRadio } from "../types";
+import { startWindowDrag } from "../lib/windowDrag";
 
 interface HeaderProps {
   activeTab: string;
@@ -57,7 +58,11 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="p-6 sticky top-0 bg-[#08090a]/30 backdrop-blur-md border-b border-white/5 flex items-center justify-between gap-4 z-10">
+    <header
+      data-tauri-drag-region
+      onMouseDown={startWindowDrag}
+      className="p-6 sticky top-0 bg-[#08090a]/30 backdrop-blur-md border-b border-white/5 flex items-center justify-between gap-4 z-10"
+    >
       <div className="flex items-center gap-4 flex-1">
         {/* Toggle Button (Hidden on small screens, shown on medium/large screens) */}
         <button

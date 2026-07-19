@@ -1548,7 +1548,36 @@ async fn get_yt_lyrics(
 
 use std::fs::{self, File};
 use std::io::Write;
-use tauri::Manager;
+use tauri::{Manager, State};
+
+struct KeepAwakeState(Mutex<Option<keepawake::KeepAwake>>);
+
+#[tauri::command]
+fn set_keep_awake(state: State<'_, KeepAwakeState>, enabled: bool) -> Result<(), String> {
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|_| "Failed to acquire keep-awake lock".to_string())?;
+
+    if enabled {
+        if guard.is_none() {
+            let awake = keepawake::Builder::default()
+                .display(true)
+                .idle(true)
+                .sleep(true)
+                .reason("Aria lyrics mode")
+                .app_name("Aria")
+                .app_reverse_domain("com.aria.app")
+                .create()
+                .map_err(|e| format!("Failed to keep awake: {e}"))?;
+            *guard = Some(awake);
+        }
+    } else {
+        *guard = None;
+    }
+
+    Ok(())
+}
 
 #[tauri::command]
 async fn download_track(
@@ -1686,6 +1715,7 @@ fn delete_downloaded_track(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(KeepAwakeState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             greet,
             set_auth_token,
@@ -1700,7 +1730,8 @@ pub fn run() {
             get_yt_lyrics,
             download_track,
             check_download_exists,
-            delete_downloaded_track
+            delete_downloaded_track,
+            set_keep_awake
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,3 +1,4 @@
+import { useEffect, useState, useRef } from "react";
 import { AlertCircle, WifiOff } from "lucide-react";
 import { Track } from "./types";
 import { Sidebar } from "./components/Sidebar";
@@ -12,16 +13,17 @@ import { Settings } from "./components/Settings";
 import { SearchView } from "./components/SearchView";
 import { LibraryView } from "./components/LibraryView";
 import { usePlayback } from "./hooks/usePlayback";
+import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { useLibrary } from "./hooks/useLibrary";
 import { useSearch } from "./hooks/useSearch";
 import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
-import { useEffect, useState, useRef } from "react";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
 import { YtRadiosView } from "./components/YtRadiosView";
 import { SavedRadio } from "./types";
+import { startWindowDrag } from "./lib/windowDrag";
 
 export default function App() {
   const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "https://w.wallhaven.cc/full/gw/wallhaven-gwmj9l.png");
@@ -86,6 +88,21 @@ export default function App() {
   };
 
   const [showLyricsMode, setShowLyricsMode] = useState(false);
+  const [karaokeMode, setKaraokeMode] = useState(() => {
+    const key = "aria_lyrics_karaoke";
+    const saved = localStorage.getItem(key);
+    // Default: karaoke off. Persist so preference is always explicit.
+    if (saved === null) {
+      localStorage.setItem(key, "false");
+      return false;
+    }
+    return saved === "true";
+  });
+
+  const handleKaraokeModeChange = (value: boolean) => {
+    setKaraokeMode(value);
+    localStorage.setItem("aria_lyrics_karaoke", String(value));
+  };
   const [savedRadios, setSavedRadios] = useState<SavedRadio[]>(() => {
     try {
       const saved = localStorage.getItem("aria_saved_radios");
@@ -296,6 +313,8 @@ export default function App() {
     handleVolumeChange,
     toggleMute,
     handleSeek,
+    seekBy,
+    adjustVolume,
     handleNext,
     handlePrev,
     addTrackToQueue,
@@ -316,6 +335,22 @@ export default function App() {
         )
       );
     },
+  });
+
+  usePlayerShortcuts({
+    enabled: true,
+    currentTrack,
+    isShuffled,
+    isLooping,
+    togglePlay,
+    handleNext,
+    handlePrev,
+    seekBy,
+    adjustVolume,
+    toggleMute,
+    setIsShuffled,
+    setIsLooping,
+    toggleFavorite,
   });
 
   const hasQueue = queue.length > 0;
@@ -344,7 +379,11 @@ export default function App() {
         loop={isLooping}
       />
 
-      <div data-tauri-drag-region className="h-8 shrink-0 z-20" />
+      <div
+        data-tauri-drag-region
+        onMouseDown={startWindowDrag}
+        className="h-11 w-full shrink-0 z-50 cursor-default"
+      />
 
       {!isOnline && (
         <div className="mx-6 mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-inner z-20 backdrop-blur-md">
@@ -550,9 +589,9 @@ export default function App() {
         </section>
       </div>
 
-      {/* Footer Player Card */}
-      {currentTrack && (
-        <div className="relative z-50">
+      {/* Footer Player — hidden only in karaoke lyrics mode */}
+      {currentTrack && !(showLyricsMode && karaokeMode) && (
+        <div className="relative z-[80]">
           <Player
             currentTrack={currentTrack}
             isPlaying={isPlaying}
@@ -591,6 +630,8 @@ export default function App() {
           lyrics={lyrics}
           lyricsLoading={lyricsLoading}
           audioRef={audioRef}
+          karaokeMode={karaokeMode}
+          setKaraokeMode={handleKaraokeModeChange}
         />
       )}
 

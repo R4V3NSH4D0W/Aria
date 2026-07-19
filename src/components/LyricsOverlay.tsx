@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { X, Loader2, FileText } from "lucide-react";
+import { X, Loader2, FileText, Coffee, Moon, Mic } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { Track } from "../types";
 
 interface Word {
@@ -20,6 +21,16 @@ interface LyricsOverlayProps {
   lyrics: string | null;
   lyricsLoading: boolean;
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  karaokeMode: boolean;
+  setKaraokeMode: (value: boolean) => void;
+}
+
+const KEEP_AWAKE_KEY = "aria_lyrics_keep_awake";
+
+function readKeepAwakePreference(): boolean {
+  const saved = localStorage.getItem(KEEP_AWAKE_KEY);
+  if (saved === null) return true; // default on
+  return saved === "true";
 }
 
 export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
@@ -29,8 +40,11 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   lyrics,
   lyricsLoading,
   audioRef,
+  karaokeMode,
+  setKaraokeMode,
 }) => {
   const [preciseProgress, setPreciseProgress] = useState(0);
+  const [keepAwake, setKeepAwake] = useState(readKeepAwakePreference);
 
   // Time-synced lyrics parser helper
   const parsedLyrics = useMemo(() => {
@@ -101,6 +115,30 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
     return { type: "plain" as const, lines: lyrics };
   }, [lyrics]);
+
+  // Keep display awake while lyrics mode is open (when enabled)
+  useEffect(() => {
+    const shouldKeepAwake = show && keepAwake;
+    invoke("set_keep_awake", { enabled: shouldKeepAwake }).catch((err) => {
+      console.error("Keep awake failed:", err);
+    });
+
+    return () => {
+      invoke("set_keep_awake", { enabled: false }).catch(() => {});
+    };
+  }, [show, keepAwake]);
+
+  const toggleKeepAwake = () => {
+    setKeepAwake((prev) => {
+      const next = !prev;
+      localStorage.setItem(KEEP_AWAKE_KEY, String(next));
+      return next;
+    });
+  };
+
+  const toggleKaraokeMode = () => {
+    setKaraokeMode(!karaokeMode);
+  };
 
   // RequestAnimationFrame loop with sub-millisecond system clock interpolation
   useEffect(() => {
@@ -178,34 +216,78 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   const adjustedProgress = preciseProgress + LYRIC_OFFSET;
 
   return (
-    <div className="fixed inset-0 z-40 bg-[#07080a]/85 backdrop-blur-3xl flex flex-col animate-fade-in pb-28">
+    <div className="fixed inset-0 z-[70] bg-[#07080a]/92 backdrop-blur-3xl flex flex-col animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 shrink-0">
-        <div className="flex items-center gap-4">
+      <div
+        className={`flex items-center justify-between gap-3 pl-20 pr-6 shrink-0 transition-all duration-300 ${
+          karaokeMode
+            ? "py-3 border-b border-transparent"
+            : "py-5 border-b border-white/5"
+        }`}
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <img
             src={currentTrack.thumbnail}
             alt={currentTrack.title}
-            className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-lg"
+            className={`rounded-xl object-cover border border-white/10 shadow-lg shrink-0 transition-all ${
+              karaokeMode ? "w-9 h-9" : "w-12 h-12"
+            }`}
           />
-          <div>
-            <h2 className="text-base font-bold text-white leading-tight truncate max-w-md">
+          <div className="min-w-0">
+            <h2
+              className={`font-bold text-white leading-tight truncate ${
+                karaokeMode ? "text-sm" : "text-base"
+              }`}
+            >
               {currentTrack.title}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5 truncate max-w-md">
-              {currentTrack.uploaderName}
-            </p>
+            {!karaokeMode && (
+              <p className="text-xs text-slate-400 mt-0.5 truncate">
+                {currentTrack.uploaderName}
+              </p>
+            )}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2.5 rounded-full bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleKaraokeMode}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+              karaokeMode
+                ? "bg-indigo-500/20 border-indigo-400/40 text-indigo-300"
+                : "bg-white/5 border-white/10 text-slate-300 hover:text-white hover:bg-white/10"
+            }`}
+            title={karaokeMode ? "Exit karaoke mode" : "Enter karaoke mode"}
+          >
+            <Mic className="w-4 h-4" />
+            <span>{karaokeMode ? "Karaoke On" : "Karaoke"}</span>
+          </button>
+          <button
+            onClick={toggleKeepAwake}
+            className={`p-2.5 rounded-full border transition-all cursor-pointer ${
+              keepAwake
+                ? "bg-indigo-500/15 border-indigo-400/30 text-indigo-300 hover:bg-indigo-500/25"
+                : "bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+            title={keepAwake ? "Keep screen awake (on)" : "Keep screen awake (off)"}
+          >
+            {keepAwake ? <Coffee className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-2.5 rounded-full bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+            title="Close lyrics"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Lyrics Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-20 flex flex-col items-center justify-start min-h-0 scrollbar-thin select-text scroll-py-40">
+      {/* Lyrics Content — pad bottom in normal mode so lines clear the floating player */}
+      <div
+        className={`flex-1 overflow-y-auto px-6 flex flex-col items-center justify-start min-h-0 scrollbar-thin select-text ${
+          karaokeMode ? "pt-10 pb-24" : "pt-12 pb-40"
+        }`}
+      >
         {lyricsLoading ? (
           <div className="my-auto flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
@@ -215,7 +297,11 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
           </div>
         ) : lyrics ? (
           parsedLyrics.type === "synced" ? (
-            <div className="max-w-7xl w-full flex flex-col gap-8 py-24 px-4 select-text text-center">
+            <div
+              className={`max-w-7xl w-full flex flex-col select-text text-center ${
+                karaokeMode ? "gap-10 py-8 px-4" : "gap-8 py-12 px-4"
+              }`}
+            >
               {parsedLyrics.lines.map((line, idx) => {
                 const isActive = idx === activeLyricIndex;
                 if (isActive) {
@@ -225,7 +311,11 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                        className={`text-center font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 ${
+                          karaokeMode
+                            ? "text-4xl sm:text-5xl lg:text-6xl"
+                            : "text-3xl sm:text-4xl lg:text-5xl"
+                        }`}
                       >
                         {line.words.map((word, wIdx) => {
                           const nextWord = line.words![wIdx + 1];
@@ -266,7 +356,11 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       <p
                         key={idx}
                         id={`lyric-line-${idx}`}
-                        className="text-center text-3xl sm:text-4xl lg:text-5xl font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1"
+                        className={`text-center font-black scale-[1.02] transition-all duration-300 origin-center flex flex-wrap justify-center gap-x-2 gap-y-1 ${
+                          karaokeMode
+                            ? "text-4xl sm:text-5xl lg:text-6xl"
+                            : "text-3xl sm:text-4xl lg:text-5xl"
+                        }`}
                       >
                         {words.map((word, wIdx) => {
                           const wordStartTime = line.time + wIdx * adjustedWordDuration;
@@ -295,7 +389,11 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                     <p
                       key={idx}
                       id={`lyric-line-${idx}`}
-                      className="text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-300 origin-center leading-normal"
+                      className={`text-center font-extrabold text-slate-500 opacity-25 hover:opacity-50 transition-all duration-300 origin-center leading-normal ${
+                        karaokeMode
+                          ? "text-3xl sm:text-4xl lg:text-5xl"
+                          : "text-2xl sm:text-3xl lg:text-4xl"
+                      }`}
                     >
                       {line.text}
                     </p>
@@ -322,6 +420,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
           </div>
         )}
       </div>
+      {/* karaoke toggle lives in header only */}
     </div>
   );
 };

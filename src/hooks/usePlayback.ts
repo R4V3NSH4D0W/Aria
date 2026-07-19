@@ -200,12 +200,24 @@ export function usePlayback({
       // Ignore if a manual seek occurred within the last 1 second to allow seeking near the end
       const isRecentlySeeking = Date.now() - lastSeekTimeRef.current < 1000;
       if (duration > 0 && curTime >= duration && !isRecentlySeeking && !autoAdvancedRef.current) {
+        if (isLooping) {
+          // Repeat current song instead of advancing
+          lastSeekTimeRef.current = Date.now();
+          audioRef.current.currentTime = 0;
+          setProgress(0);
+          lastTimeRef.current = null;
+          if (audioRef.current.paused) {
+            audioRef.current.play().catch(() => {});
+          }
+          return;
+        }
+
         autoAdvancedRef.current = true;
         audioRef.current.pause();
         handleNext();
       }
     }
-  }, [currentTrack, duration, handleNext, onTrackPlayed]);
+  }, [currentTrack, duration, handleNext, isLooping, onTrackPlayed]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (audioRef.current) {
@@ -218,8 +230,9 @@ export function usePlayback({
   }, []);
 
   const handleAudioEnded = useCallback(() => {
+    if (isLooping) return; // native loop / seek-restart handles single-track repeat
     handleNext();
-  }, [handleNext]);
+  }, [handleNext, isLooping]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -263,6 +276,38 @@ export function usePlayback({
       lastTimeRef.current = null; // Clear last time so seek jump is not counted
     }
   }, []);
+
+  const seekBy = useCallback(
+    (deltaSeconds: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      const max = duration > 0 ? duration : isFinite(audio.duration) ? audio.duration : 0;
+      const next = Math.max(0, Math.min(max || Infinity, audio.currentTime + deltaSeconds));
+      lastSeekTimeRef.current = Date.now();
+      audio.currentTime = next;
+      setProgress(next);
+      lastTimeRef.current = null;
+    },
+    [duration]
+  );
+
+  const adjustVolume = useCallback(
+    (delta: number) => {
+      setVolume((prev) => {
+        const next = Math.max(0, Math.min(1, Math.round((prev + delta) * 100) / 100));
+        if (audioRef.current) {
+          audioRef.current.volume = next;
+          if (delta > 0 && isMuted) {
+            setIsMuted(false);
+            audioRef.current.muted = false;
+          }
+        }
+        return next;
+      });
+    },
+    [isMuted]
+  );
 
   const addTrackToQueue = useCallback(
     async (track: Track) => {
@@ -385,22 +430,56 @@ export function usePlayback({
 
   // Media Session API for macOS/Windows/Android lockscreen and control center
   useEffect(() => {
-    if ("mediaSession" in navigator && currentTrack) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.title,
-        artist: currentTrack.uploaderName,
-        artwork: [
-          {
-            src: currentTrack.thumbnail,
-            sizes: "512x512",
-            type: "image/jpeg",
-          },
-        ],
-      });
-      navigator.mediaSession.setActionHandler("previoustrack", handlePrev);
-      navigator.mediaSession.setActionHandler("nexttrack", handleNext);
-    }
-  }, [currentTrack, handlePrev, handleNext]);
+    if (!("mediaSession" in navigator) || !currentTrack) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title,
+      artist: currentTrack.uploaderName,
+      artwork: [
+        {
+          src: currentTrack.thumbnail,
+          sizes: "512x512",
+          type: "image/jpeg",
+        },
+      ],
+    });
+
+    const playOrResume = () => {
+      const audio = audioRef.current;
+      if (!audio || !audio.src) return;
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          if (err?.name === "AbortError") return;
+          setPlaybackError("Playback resume failed.");
+        });
+    };
+
+    const pausePlayback = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.pause();
+      setIsPlaying(false);
+      lastTimeRef.current = null;
+    };
+
+    navigator.mediaSession.setActionHandler("play", playOrResume);
+    navigator.mediaSession.setActionHandler("pause", pausePlayback);
+    navigator.mediaSession.setActionHandler("previoustrack", handlePrev);
+    navigator.mediaSession.setActionHandler("nexttrack", handleNext);
+    navigator.mediaSession.setActionHandler("seekbackward", () => seekBy(-5));
+    navigator.mediaSession.setActionHandler("seekforward", () => seekBy(5));
+
+    return () => {
+      navigator.mediaSession.setActionHandler("play", null);
+      navigator.mediaSession.setActionHandler("pause", null);
+      navigator.mediaSession.setActionHandler("previoustrack", null);
+      navigator.mediaSession.setActionHandler("nexttrack", null);
+      navigator.mediaSession.setActionHandler("seekbackward", null);
+      navigator.mediaSession.setActionHandler("seekforward", null);
+    };
+  }, [currentTrack, handlePrev, handleNext, seekBy]);
 
   return {
     currentTrack,
@@ -425,6 +504,8 @@ export function usePlayback({
     handleVolumeChange,
     toggleMute,
     handleSeek,
+    seekBy,
+    adjustVolume,
     handleNext,
     handlePrev,
     addTrackToQueue,
