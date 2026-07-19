@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Track, Playlist, YtPlaylist } from "../types";
+import { useMediaQuery } from "./useMediaQuery";
 
 export function useLibrary() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -13,6 +14,30 @@ export function useLibrary() {
   });
   const [activeTab, setActiveTab] = useState<string>(() => navigator.onLine ? "home" : "favorites");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const isWide = useMediaQuery("(min-width: 1024px)");
+  const sidebarClosedByUser = useRef(false);
+
+  // Auto-close on narrow; auto-open on wide only if user never manually closed
+  useEffect(() => {
+    if (!isWide) {
+      setIsSidebarOpen(false);
+    } else if (!sidebarClosedByUser.current) {
+      setIsSidebarOpen(true);
+    }
+  }, [isWide]);
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((open) => {
+      const next = !open;
+      if (!next) {
+        sidebarClosedByUser.current = true;
+      } else {
+        sidebarClosedByUser.current = false;
+      }
+      return next;
+    });
+  }, []);
+
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [pendingTrackForPlaylist, setPendingTrackForPlaylist] = useState<Track | null>(null);
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -295,7 +320,7 @@ export function useLibrary() {
     setFavoriteSort,
     setRecentlyPlayed,
     setActiveTab,
-    setIsSidebarOpen,
+    toggleSidebar,
     setShowCreatePlaylistModal: customSetShowCreatePlaylistModal,
     setNewPlaylistName,
     setActiveDropdownTrackId,

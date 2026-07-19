@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { AlertCircle, WifiOff } from "lucide-react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Track, FavoriteArtist } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -19,6 +18,8 @@ import { useLibrary } from "./hooks/useLibrary";
 import { useSearch } from "./hooks/useSearch";
 import { useArtist } from "./hooks/useArtist";
 import { useHome } from "./hooks/useHome";
+import { useKaraoke } from "./hooks/useKaraoke";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
@@ -28,7 +29,11 @@ import { SavedRadio } from "./types";
 import { startWindowDrag } from "./lib/windowDrag";
 
 export default function App() {
-  const [wallpaperUrl, setWallpaperUrl] = useState(() => localStorage.getItem("aria_wallpaper_url") || "https://w.wallhaven.cc/full/6l/wallhaven-6lpkl7.jpg");
+  const [wallpaperUrl, setWallpaperUrl] = useState(
+    () =>
+      localStorage.getItem("aria_wallpaper_url") ||
+      "https://w.wallhaven.cc/full/6l/wallhaven-6lpkl7.jpg",
+  );
   const [wallpaperOpacity, setWallpaperOpacity] = useState(() => {
     const saved = localStorage.getItem("aria_wallpaper_opacity");
     return saved ? parseFloat(saved) : 0.3;
@@ -51,7 +56,7 @@ export default function App() {
     setYtPlaylists,
     setFavoriteSort,
     setActiveTab,
-    setIsSidebarOpen,
+    toggleSidebar,
     setShowCreatePlaylistModal,
     setNewPlaylistName,
     setActiveDropdownTrackId,
@@ -76,12 +81,20 @@ export default function App() {
         setSavedRadios((prev) =>
           prev.map((r) => {
             if (r.id === radioId && r.tracks) {
-              const updatedTracks = r.tracks.filter((t) => t.videoId !== videoId);
-              const collageThumbnails = updatedTracks.slice(0, 4).map((t) => t.thumbnail);
-              return { ...r, tracks: updatedTracks, thumbnails: collageThumbnails };
+              const updatedTracks = r.tracks.filter(
+                (t) => t.videoId !== videoId,
+              );
+              const collageThumbnails = updatedTracks
+                .slice(0, 4)
+                .map((t) => t.thumbnail);
+              return {
+                ...r,
+                tracks: updatedTracks,
+                thumbnails: collageThumbnails,
+              };
             }
             return r;
-          })
+          }),
         );
       }
       return;
@@ -89,32 +102,11 @@ export default function App() {
     baseRemoveTrackFromPlaylist(playlistId, videoId);
   };
 
-  const [showLyricsMode, setShowLyricsMode] = useState(false);
-  const [karaokeMode, setKaraokeMode] = useState(false);
+  const { showLyricsMode, setShowLyricsMode, karaokeMode, setKaraokeMode } =
+    useKaraoke();
 
-  // Manage Tauri window fullscreen state for Karaoke mode
-  useEffect(() => {
-    const syncFullscreen = async () => {
-      try {
-        const appWindow = getCurrentWindow();
-        if (showLyricsMode && karaokeMode) {
-          await appWindow.setFullscreen(true);
-        } else {
-          await appWindow.setFullscreen(false);
-        }
-      } catch (err) {
-        console.error("Failed to sync fullscreen state:", err);
-      }
-    };
-    syncFullscreen();
-  }, [showLyricsMode, karaokeMode]);
+  const { hasUpdate, latestVersion } = useUpdateCheck();
 
-  // Turn off karaoke mode when lyrics overlay is closed
-  useEffect(() => {
-    if (!showLyricsMode) {
-      setKaraokeMode(false);
-    }
-  }, [showLyricsMode]);
   const [savedRadios, setSavedRadios] = useState<SavedRadio[]>(() => {
     try {
       const saved = localStorage.getItem("aria_saved_radios");
@@ -128,20 +120,29 @@ export default function App() {
     localStorage.setItem("aria_saved_radios", JSON.stringify(savedRadios));
   }, [savedRadios]);
 
-  const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtist[]>(() => {
-    try {
-      const saved = localStorage.getItem("aria_favorite_artists");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtist[]>(
+    () => {
+      try {
+        const saved = localStorage.getItem("aria_favorite_artists");
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    },
+  );
 
   useEffect(() => {
-    localStorage.setItem("aria_favorite_artists", JSON.stringify(favoriteArtists));
+    localStorage.setItem(
+      "aria_favorite_artists",
+      JSON.stringify(favoriteArtists),
+    );
   }, [favoriteArtists]);
 
-  const toggleFavoriteArtist = (artist: { browseId: string; name: string; thumbnail: string }) => {
+  const toggleFavoriteArtist = (artist: {
+    browseId: string;
+    name: string;
+    thumbnail: string;
+  }) => {
     setFavoriteArtists((prev) => {
       const exists = prev.some((a) => a.browseId === artist.browseId);
       if (exists) {
@@ -154,7 +155,9 @@ export default function App() {
 
   const togglePinArtist = (browseId: string) => {
     setFavoriteArtists((prev) =>
-      prev.map((a) => (a.browseId === browseId ? { ...a, isPinned: !a.isPinned } : a))
+      prev.map((a) =>
+        a.browseId === browseId ? { ...a, isPinned: !a.isPinned } : a,
+      ),
     );
   };
 
@@ -165,33 +168,9 @@ export default function App() {
 
   const renameSavedRadio = (radioId: string, newTitle: string) => {
     setSavedRadios((prev) =>
-      prev.map((r) => (r.id === radioId ? { ...r, title: newTitle } : r))
+      prev.map((r) => (r.id === radioId ? { ...r, title: newTitle } : r)),
     );
   };
-
-  // Automatically minimize sidebar on small viewports, maximize on desktops
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 640px)");
-    const listener = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsSidebarOpen(!e.matches);
-    };
-    // Set initial state
-    setIsSidebarOpen(!media.matches);
-    
-    if (media.addEventListener) {
-      media.addEventListener("change", listener as EventListener);
-    } else {
-      (media as any).addListener(listener);
-    }
-    
-    return () => {
-      if (media.removeEventListener) {
-        media.removeEventListener("change", listener as EventListener);
-      } else {
-        (media as any).removeListener(listener);
-      }
-    };
-  }, [setIsSidebarOpen]);
 
   const {
     searchQuery,
@@ -253,10 +232,16 @@ export default function App() {
 
   // Auto-save & update YouTube Radio mixes to our Saved Radios list
   useEffect(() => {
-    if (activeTab.startsWith("yt:RD") && ytPlaylistTracks.length > 0 && loadedId === activeTab.slice(3)) {
+    if (
+      activeTab.startsWith("yt:RD") &&
+      ytPlaylistTracks.length > 0 &&
+      loadedId === activeTab.slice(3)
+    ) {
       const radioId = activeTab.slice(3);
       const firstTrack = ytPlaylistTracks[0];
-      const collageThumbnails = ytPlaylistTracks.slice(0, 4).map((t) => t.thumbnail);
+      const collageThumbnails = ytPlaylistTracks
+        .slice(0, 4)
+        .map((t) => t.thumbnail);
 
       setSavedRadios((prev) => {
         const existingIndex = prev.findIndex((r) => r.id === radioId);
@@ -273,17 +258,21 @@ export default function App() {
           return [newRadio, ...prev];
         } else {
           const existingRadio = prev[existingIndex];
-          const tracksChanged = !existingRadio.tracks || existingRadio.tracks.length !== ytPlaylistTracks.length;
-          const thumbsChanged = !existingRadio.thumbnails || existingRadio.thumbnails.length !== collageThumbnails.length;
+          const tracksChanged =
+            !existingRadio.tracks ||
+            existingRadio.tracks.length !== ytPlaylistTracks.length;
+          const thumbsChanged =
+            !existingRadio.thumbnails ||
+            existingRadio.thumbnails.length !== collageThumbnails.length;
           if (tracksChanged || thumbsChanged) {
             return prev.map((r) =>
               r.id === radioId
                 ? {
                     ...r,
                     thumbnails: collageThumbnails,
-                    tracks: ytPlaylistTracks
+                    tracks: ytPlaylistTracks,
                   }
-                : r
+                : r,
             );
           }
         }
@@ -291,7 +280,6 @@ export default function App() {
       });
     }
   }, [activeTab, ytPlaylistTracks, loadedId]);
-
 
   const handleTabChange = (tab: string) => {
     baseHandleTabChange(tab);
@@ -306,7 +294,9 @@ export default function App() {
       return recentlyPlayed;
     }
     if (activeTab === "search") {
-      return searchResults.filter((item): item is Track => !("type" in item && item.type === "artist"));
+      return searchResults.filter(
+        (item): item is Track => !("type" in item && item.type === "artist"),
+      );
     }
     if (activeTab === "favorites") {
       const sortedFavorites = [...favorites].sort((a, b) => {
@@ -374,8 +364,10 @@ export default function App() {
     onResolveStateChange: (videoId, isResolving) => {
       setSearchResults((prev) =>
         prev.map((t) =>
-          t.type !== "artist" && t.videoId === videoId ? { ...t, isResolving } : t
-        )
+          t.type !== "artist" && t.videoId === videoId
+            ? { ...t, isResolving }
+            : t,
+        ),
       );
     },
   });
@@ -399,7 +391,9 @@ export default function App() {
   const hasQueue = queue.length > 0;
 
   return (
-    <main className={`h-screen w-screen text-slate-100 flex flex-col font-sans relative overflow-hidden select-none transition-colors duration-500 ${wallpaperUrl ? "bg-[#040506]" : "bg-[#08090a]"}`}>
+    <main
+      className={`h-screen w-screen text-slate-100 flex flex-col font-sans relative overflow-hidden select-none transition-colors duration-500 ${wallpaperUrl ? "bg-[#040506]" : "bg-[#08090a]"}`}
+    >
       {/* Background Wallpaper Layer */}
       {wallpaperUrl && (
         <img
@@ -446,7 +440,9 @@ export default function App() {
 
       <div className="flex flex-1 overflow-hidden z-10">
         <Sidebar
-          activeTab={selectedArtist || artistLoading ? "artist-profile" : activeTab}
+          activeTab={
+            selectedArtist || artistLoading ? "artist-profile" : activeTab
+          }
           setActiveTab={handleTabChange}
           playlists={playlists}
           deletePlaylist={(id, e) => {
@@ -465,7 +461,9 @@ export default function App() {
           className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? "pb-36" : ""}`}
         >
           <Header
-            activeTab={selectedArtist || artistLoading ? "artist-profile" : activeTab}
+            activeTab={
+              selectedArtist || artistLoading ? "artist-profile" : activeTab
+            }
             playlists={playlists}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -473,10 +471,11 @@ export default function App() {
             favoriteSort={favoriteSort}
             setFavoriteSort={setFavoriteSort}
             isSidebarOpen={isSidebarOpen}
-            toggleSidebar={() => setIsSidebarOpen((open) => !open)}
+            toggleSidebar={toggleSidebar}
             onOpenSettings={() => setActiveTab("settings")}
             ytPlaylists={ytPlaylists}
             savedRadios={savedRadios}
+            hasUpdate={hasUpdate}
           />
 
           <div
@@ -540,6 +539,8 @@ export default function App() {
                   setWallpaperUrl={setWallpaperUrl}
                   wallpaperOpacity={wallpaperOpacity}
                   setWallpaperOpacity={setWallpaperOpacity}
+                  hasUpdate={hasUpdate}
+                  latestVersion={latestVersion}
                 />
               ) : (
                 <>
@@ -625,14 +626,20 @@ export default function App() {
                       downloadingTrackIds={downloadingTrackIds}
                       downloadTrack={downloadTrack}
                       deleteDownload={deleteDownload}
-                      onBack={activeTab.startsWith("yt:") ? (activeTab.startsWith("yt:RD") ? () => setActiveTab("yt-radios") : () => setActiveTab("yt-playlists")) : undefined}
+                      onBack={
+                        activeTab.startsWith("yt:")
+                          ? activeTab.startsWith("yt:RD")
+                            ? () => setActiveTab("yt-radios")
+                            : () => setActiveTab("yt-playlists")
+                          : undefined
+                      }
                     />
                   )}
                 </>
               )}
             </div>
 
-            {(hasQueue) && (
+            {hasQueue && (
               <QueuePanel
                 queue={queue}
                 currentTrack={currentTrack}

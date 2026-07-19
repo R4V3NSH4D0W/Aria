@@ -64,6 +64,14 @@ jobs:
           workspaces: |
             src-tauri -> target
 
+      - name: Generate release body
+        id: release_body
+        run: |
+          body=$(cat .github/release_template.md | sed 's/{{VERSION}}/__VERSION__/g')
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build and Publish
         uses: tauri-apps/tauri-action@v0
         env:
@@ -71,14 +79,7 @@ jobs:
         with:
           tagName: aria-v__VERSION__
           releaseName: "Aria v__VERSION__"
-          releaseBody: |
-            ## 🚀 Aria v__VERSION__
-
-            ### Downloads
-            - 🍎 macOS
-            - 🪟 Windows
-            - 🐧 Linux
-
-          releaseDraft: false
+          releaseBody: ${{ steps.release_body.outputs.body }}
+          releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

@@ -200,7 +200,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   const activeTrack = queue.find((track) => getStableTrackId(track) === activeId);
 
   return (
-    <aside className="hidden lg:flex lg:flex-col gap-4 bg-[#0e1015]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.28)] sticky top-6 self-start max-h-[calc(100vh-11.5rem)] w-[320px] shrink-0">
+    <aside className="hidden lg:flex lg:flex-col gap-4 bg-[#0e1015]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.28)] sticky top-[88px] self-start max-h-[calc(100vh-15.5rem)] w-[320px] shrink-0">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">

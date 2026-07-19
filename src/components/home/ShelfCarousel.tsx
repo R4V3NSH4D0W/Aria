@@ -16,6 +16,7 @@ interface ShelfCarouselProps {
   currentTrack: Track | null;
   isPlaying: boolean;
   scrollbarHide?: boolean;
+  maxVisible?: number;
 }
 
 export const ShelfCarousel: React.FC<ShelfCarouselProps> = ({
@@ -28,7 +29,10 @@ export const ShelfCarousel: React.FC<ShelfCarouselProps> = ({
   currentTrack,
   isPlaying,
   scrollbarHide = false,
+  maxVisible,
 }) => {
+  const visibleTracks = maxVisible ? tracks.slice(0, maxVisible) : tracks;
+  const remaining = maxVisible ? Math.max(0, tracks.length - maxVisible) : 0;
   return (
     <section>
       <div className="flex items-center justify-between mb-6">
@@ -60,7 +64,7 @@ export const ShelfCarousel: React.FC<ShelfCarouselProps> = ({
       </div>
 
       <div className={`flex gap-6 overflow-x-auto pb-6 ${scrollbarHide ? "scrollbar-hide" : "scrollbar-none"}`}>
-        {tracks.map((track, trackIdx) => {
+        {visibleTracks.map((track, trackIdx) => {
           const isCurrentTrack = currentTrack?.videoId === track.videoId;
 
           return (
@@ -109,6 +113,21 @@ export const ShelfCarousel: React.FC<ShelfCarouselProps> = ({
             </div>
           );
         })}
+        {remaining > 0 && (
+          <div className="flex-none w-48">
+            <div className="w-48 h-48 rounded-2xl mb-4 shadow-lg border border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center gap-2">
+              <span className="text-3xl font-bold text-indigo-400">
+                +{remaining}
+              </span>
+              <span className="text-sm text-slate-400">
+                more
+              </span>
+            </div>
+            <h3 className="font-semibold text-sm text-slate-400/60 truncate text-center">
+              {tracks.length} total tracks
+            </h3>
+          </div>
+        )}
       </div>
     </section>
   );

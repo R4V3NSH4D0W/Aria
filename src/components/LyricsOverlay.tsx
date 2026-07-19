@@ -1,5 +1,14 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { X, Loader2, FileText, Coffee, Moon, Mic, Sliders, RotateCcw } from "lucide-react";
+import {
+  X,
+  Loader2,
+  FileText,
+  Coffee,
+  Moon,
+  Mic,
+  Sliders,
+  RotateCcw,
+} from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { Track } from "../types";
 
@@ -68,7 +77,10 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   // Click outside to close offset panel
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (offsetPanelRef.current && !offsetPanelRef.current.contains(e.target as Node)) {
+      if (
+        offsetPanelRef.current &&
+        !offsetPanelRef.current.contains(e.target as Node)
+      ) {
         setShowOffsetPanel(false);
       }
     };
@@ -112,7 +124,10 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
         let text = match[4].trim();
 
         // Strip Metrolist markup tags {agent:...} or {bg}
-        text = text.replace(/\{agent:[^}]+\}/g, "").replace(/\{bg\}/g, "").trim();
+        text = text
+          .replace(/\{agent:[^}]+\}/g, "")
+          .replace(/\{bg\}/g, "")
+          .trim();
 
         let words: Word[] = [];
 
@@ -166,7 +181,10 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
         const text = line.trim();
         if (text && !(text.startsWith("<") && text.endsWith(">"))) {
           parsedLines.push({
-            time: parsedLines.length > 0 ? parsedLines[parsedLines.length - 1].time : 0,
+            time:
+              parsedLines.length > 0
+                ? parsedLines[parsedLines.length - 1].time
+                : 0,
             text,
           });
         }
@@ -255,7 +273,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
       if (audio) {
         const now = performance.now();
         const playing = !audio.paused && !audio.seeking;
-        
+
         // Sync with browser audio state when it actually steps/changes
         if (audio.currentTime !== lastAudioTime || playing !== isPlaying) {
           lastAudioTime = audio.currentTime;
@@ -304,7 +322,9 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
   // Smooth scroll active line into view
   useEffect(() => {
     if (show && activeLyricIndex !== -1) {
-      const activeEl = document.getElementById(`lyric-line-${activeLyricIndex}`);
+      const activeEl = document.getElementById(
+        `lyric-line-${activeLyricIndex}`,
+      );
       if (activeEl) {
         activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -323,10 +343,12 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     >
       {/* Header */}
       <div
-        className={`flex items-center justify-between gap-3 pl-20 pr-6 shrink-0 transition-all duration-300 ${
-          karaokeMode
-            ? "py-3 border-b border-transparent"
-            : "py-5 border-b border-white/5"
+        className={`flex items-center justify-between gap-3 pl-20 pr-6 shrink-0 transition-all duration-500 ${
+          karaokeMode && isMouseIdle
+            ? "opacity-0 pointer-events-none max-h-0 py-0 border-transparent"
+            : karaokeMode
+              ? "opacity-100 max-h-20 py-3 border-b border-white/5"
+              : "opacity-100 max-h-20 py-5 border-b border-white/5"
         }`}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -365,7 +387,7 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
             <Mic className="w-4 h-4" />
             <span>{karaokeMode ? "Karaoke On" : "Karaoke"}</span>
           </button>
-          
+
           <div className="relative" ref={offsetPanelRef}>
             <button
               onClick={() => setShowOffsetPanel(!showOffsetPanel)}
@@ -377,13 +399,18 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
               title="Adjust lyric offset"
             >
               <Sliders className="w-4 h-4" />
-              <span>{userOffset === 0 ? "Sync" : `${userOffset > 0 ? "+" : ""}${userOffset.toFixed(1)}s`}</span>
+              <span>
+                {userOffset === 0
+                  ? "Sync"
+                  : `${userOffset > 0 ? "+" : ""}${userOffset.toFixed(1)}s`}
+              </span>
             </button>
-            
             {showOffsetPanel && (
-              <div className="absolute right-0 top-full mt-2 w-64 p-4 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 shadow-2xl z-[80] flex flex-col gap-3">
+              <div className="absolute right-0 top-full mt-2 w-64 p-3 rounded-xl bg-[#12151b]/95 backdrop-blur-md border border-white/10 shadow-2xl z-[80] flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200">Lyric Sync Offset</span>
+                  <span className="text-xs font-semibold text-slate-200">
+                    Sync Offset
+                  </span>
                   {userOffset !== 0 && (
                     <button
                       onClick={() => handleOffsetChange(0)}
@@ -395,38 +422,38 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                     </button>
                   )}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOffsetChange(Math.max(-10, Math.round((userOffset - 0.1) * 10) / 10))}
-                      className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 font-bold transition-all cursor-pointer shrink-0"
-                    >
-                      -0.1s
-                    </button>
-                    <input
-                      type="range"
-                      min="-10"
-                      max="10"
-                      step="0.1"
-                      value={userOffset}
-                      onChange={(e) => handleOffsetChange(parseFloat(e.target.value))}
-                      className="flex-1 h-1.5 bg-white/15 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                    />
-                    <button
-                      onClick={() => handleOffsetChange(Math.min(10, Math.round((userOffset + 0.1) * 10) / 10))}
-                      className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 font-bold transition-all cursor-pointer shrink-0"
-                    >
-                      +0.1s
-                    </button>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-slate-500 font-semibold px-1">
-                    <span>-10.0s (Delay)</span>
-                    <span>0.0s (Default)</span>
-                    <span>+10.0s (Early)</span>
-                  </div>
-                </div>
-                <div className="text-[10px] text-slate-400 text-center leading-normal">
-                  Adjust if lyrics are out of sync with vocals. Saved automatically for this song.
+                <div className="flex items-center  gap-2">
+                  <button
+                    onClick={() =>
+                      handleOffsetChange(
+                        Math.max(-10, Math.round((userOffset - 0.1) * 10) / 10),
+                      )
+                    }
+                    className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 font-bold transition-all cursor-pointer shrink-0"
+                  >
+                    -0.1s
+                  </button>
+                  <input
+                    type="range"
+                    min="-10"
+                    max="10"
+                    step="0.1"
+                    value={userOffset}
+                    onChange={(e) =>
+                      handleOffsetChange(parseFloat(e.target.value))
+                    }
+                    className="flex-1 h-1.5 bg-white/15 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                  <button
+                    onClick={() =>
+                      handleOffsetChange(
+                        Math.min(10, Math.round((userOffset + 0.1) * 10) / 10),
+                      )
+                    }
+                    className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 font-bold transition-all cursor-pointer shrink-0"
+                  >
+                    +0.1s
+                  </button>
                 </div>
               </div>
             )}
@@ -438,9 +465,15 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                 ? "bg-indigo-500/15 border-indigo-400/30 text-indigo-300 hover:bg-indigo-500/25"
                 : "bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10"
             }`}
-            title={keepAwake ? "Keep screen awake (on)" : "Keep screen awake (off)"}
+            title={
+              keepAwake ? "Keep screen awake (on)" : "Keep screen awake (off)"
+            }
           >
-            {keepAwake ? <Coffee className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {keepAwake ? (
+              <Coffee className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
           </button>
           <button
             onClick={onClose}
@@ -489,9 +522,21 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                       >
                         {line.words.map((word, wIdx) => {
                           const nextWord = line.words![wIdx + 1];
-                          const wordEndTime = nextWord ? nextWord.time : (parsedLyrics.lines[idx + 1]?.time ?? (audioRef.current?.duration || word.time + 3));
-                          const wordDuration = Math.max(wordEndTime - word.time, 0.1);
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - word.time) / wordDuration));
+                          const wordEndTime = nextWord
+                            ? nextWord.time
+                            : (parsedLyrics.lines[idx + 1]?.time ??
+                              (audioRef.current?.duration || word.time + 3));
+                          const wordDuration = Math.max(
+                            wordEndTime - word.time,
+                            0.1,
+                          );
+                          const wordProgress = Math.max(
+                            0,
+                            Math.min(
+                              1,
+                              (adjustedProgress - word.time) / wordDuration,
+                            ),
+                          );
                           const fillPercent = wordProgress * 100;
 
                           return (
@@ -515,12 +560,17 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                     const words = line.text.split(/\s+/);
                     const nextLine = parsedLyrics.lines[idx + 1];
                     const lineGap = nextLine ? nextLine.time - line.time : 8.0;
-                    
+
                     // Distribute words over an estimated singing duration to avoid slow sweeps in silent gaps
                     const wordDuration = 0.35; // 350ms average singing duration per word
-                    const estimatedVocalDuration = words.length * wordDuration + 0.3;
-                    const activeDuration = Math.min(lineGap, estimatedVocalDuration);
-                    const adjustedWordDuration = activeDuration / Math.max(words.length, 1);
+                    const estimatedVocalDuration =
+                      words.length * wordDuration + 0.3;
+                    const activeDuration = Math.min(
+                      lineGap,
+                      estimatedVocalDuration,
+                    );
+                    const adjustedWordDuration =
+                      activeDuration / Math.max(words.length, 1);
 
                     return (
                       <p
@@ -533,8 +583,16 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
                         }`}
                       >
                         {words.map((word, wIdx) => {
-                          const wordStartTime = line.time + wIdx * adjustedWordDuration;
-                          const wordProgress = Math.max(0, Math.min(1, (adjustedProgress - wordStartTime) / adjustedWordDuration));
+                          const wordStartTime =
+                            line.time + wIdx * adjustedWordDuration;
+                          const wordProgress = Math.max(
+                            0,
+                            Math.min(
+                              1,
+                              (adjustedProgress - wordStartTime) /
+                                adjustedWordDuration,
+                            ),
+                          );
                           const fillPercent = wordProgress * 100;
 
                           return (

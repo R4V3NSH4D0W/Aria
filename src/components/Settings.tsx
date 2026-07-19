@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Cookie, Palette } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Cookie, Palette, Sparkles, X } from "lucide-react";
 import { YtPlaylist } from "../types";
 import { AccountTab } from "./settings/AccountTab";
 import { AppearanceTab } from "./settings/AppearanceTab";
@@ -14,6 +15,8 @@ interface SettingsProps {
   setWallpaperUrl: (url: string) => void;
   wallpaperOpacity: number;
   setWallpaperOpacity: (opacity: number) => void;
+  hasUpdate?: boolean;
+  latestVersion?: string;
 }
 
 type Tab = "account" | "appearance";
@@ -48,7 +51,10 @@ export const Settings: React.FC<SettingsProps> = ({
   setWallpaperUrl,
   wallpaperOpacity,
   setWallpaperOpacity,
+  hasUpdate = false,
+  latestVersion = "",
 }) => {
+  const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("account");
   const [cookie, setCookie] = useState("");
   const [savedCookie, setSavedCookie] = useState("");
@@ -153,13 +159,21 @@ export const Settings: React.FC<SettingsProps> = ({
     <div className="h-full flex flex-col overflow-hidden">
       {/* Page Header */}
       <div className="shrink-0 px-8 pt-8 pb-6 border-b border-white/5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">
-            Settings
-          </h1>
-          <p className="text-sm text-slate-500">
-            Manage your account, appearance, and preferences.
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-slate-500">
+              Manage your account, appearance, and preferences.
+            </p>
+          </div>
+          {hasUpdate && (
+            <button
+              onClick={() => setShowReleaseNotes(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/25 transition-colors shrink-0 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>v{latestVersion.replace(/^v/i, "")} available</span>
+            </button>
+          )}
         </div>
 
         {/* Tab Bar */}
@@ -214,6 +228,67 @@ export const Settings: React.FC<SettingsProps> = ({
           )}
         </div>
       </div>
+
+      {/* Release Notes Modal */}
+      {showReleaseNotes && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center"
+          onClick={() => setShowReleaseNotes(false)}
+        >
+          <div
+            className="w-full max-w-lg mx-4 rounded-2xl bg-[#12151b] border border-white/10 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  v{latestVersion.replace(/^v/i, "")} Available
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  A new version of Aria is ready to download.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReleaseNotes(false)}
+                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  What's New
+                </h4>
+                <ul className="space-y-2">
+                  {[
+                    "Improved lyrics sync engine with better word-level timing",
+                    "New keep listening grid with +N remaining indicator",
+                    "Karaoke mode now auto-hides controls on inactivity",
+                    "Sidebar auto-closes on narrow windows",
+                    "Settings update checker with release notes",
+                    "Performance improvements and bug fixes",
+                  ].map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-sm text-slate-300"
+                    >
+                      <span className="text-green-400 mt-0.5 shrink-0">✦</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button
+                onClick={() => openUrl("https://github.com/R4V3NSH4D0W/Aria/releases/latest")}
+                className="block w-full text-center py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm font-semibold hover:bg-indigo-500/30 transition-colors cursor-pointer"
+              >
+                View on GitHub
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

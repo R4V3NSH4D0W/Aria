@@ -16,6 +16,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   ytPlaylists: { id: string; title: string }[];
   savedRadios?: SavedRadio[];
+  hasUpdate?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   ytPlaylists,
   savedRadios = [],
+  hasUpdate = false,
 }) => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
@@ -77,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Toggle Button (Hidden on small screens, shown on medium/large screens) */}
         <button
           onClick={toggleSidebar}
-          className="hidden sm:block p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          className="hidden lg:block p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
         >
           <Menu className="w-5 h-5" />
@@ -192,10 +194,13 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Settings icon button — top right */}
       <button
         onClick={onOpenSettings}
-        className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+        className="relative p-2 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
         title="Settings"
       >
         <Settings className="w-5 h-5" />
+        {hasUpdate && (
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-[#08090a]" />
+        )}
       </button>
     </header>
   );

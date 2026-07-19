@@ -105,6 +105,7 @@ export const Home: React.FC<HomeProps> = ({
             playSongs={playSongs}
             currentTrack={currentTrack}
             isPlaying={isPlaying}
+            maxVisible={8}
           />
         )}
 
