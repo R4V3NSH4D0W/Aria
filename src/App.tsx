@@ -290,6 +290,9 @@ export default function App() {
     if (selectedArtist) {
       return selectedArtist.songs;
     }
+    if (activeTab === "downloads") {
+      return downloads;
+    }
     if (activeTab === "recently-played") {
       return recentlyPlayed;
     }
@@ -332,7 +335,7 @@ export default function App() {
     duration,
     volume,
     isMuted,
-    isLooping,
+    repeatMode,
     isShuffled,
     playbackError,
     resolvedAudioUrl,
@@ -340,7 +343,7 @@ export default function App() {
     lyricsLoading,
     audioRef,
     setIsShuffled,
-    setIsLooping,
+    setRepeatMode,
     playTrack,
     togglePlay,
     handleVolumeChange,
@@ -376,7 +379,7 @@ export default function App() {
     enabled: true,
     currentTrack,
     isShuffled,
-    isLooping,
+    repeatMode,
     togglePlay,
     handleNext,
     handlePrev,
@@ -384,7 +387,7 @@ export default function App() {
     adjustVolume,
     toggleMute,
     setIsShuffled,
-    setIsLooping,
+    setRepeatMode,
     toggleFavorite,
   });
 
@@ -414,7 +417,7 @@ export default function App() {
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleAudioEnded}
-        loop={isLooping}
+        loop={repeatMode === "one"}
       />
 
       <div
@@ -662,7 +665,7 @@ export default function App() {
             currentTrack={currentTrack}
             isPlaying={isPlaying}
             isShuffled={isShuffled}
-            isLooping={isLooping}
+            repeatMode={repeatMode}
             isMuted={isMuted}
             progress={progress}
             duration={duration}
@@ -673,7 +676,7 @@ export default function App() {
             toggleFavorite={toggleFavorite}
             isFavorite={isFavorite}
             setIsShuffled={setIsShuffled}
-            setIsLooping={setIsLooping}
+            setRepeatMode={setRepeatMode}
             handleSeek={handleSeek}
             handleVolumeChange={handleVolumeChange}
             handleNext={handleNext}

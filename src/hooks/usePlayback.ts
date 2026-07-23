@@ -21,7 +21,7 @@ export function usePlayback({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
-  const [isLooping, setIsLooping] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<"none" | "all" | "one">("none");
   const [isShuffled, setIsShuffled] = useState(false);
   const [playbackError, setPlaybackError] = useState("");
   const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string | null>(null);
@@ -145,16 +145,20 @@ export function usePlayback({
     } else if (currentIndex === -1) {
       nextIndex = 0;
     } else if (nextIndex >= playbackList.length) {
-      // End of playlist/queue reached: stop playback
-      setIsPlaying(false);
-      if (audioRef.current) {
-        audioRef.current.pause();
+      if (repeatMode === "all") {
+        nextIndex = 0;
+      } else {
+        // End of playlist/queue reached: stop playback
+        setIsPlaying(false);
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        return;
       }
-      return;
     }
 
     playTrack(playbackList[nextIndex]);
-  }, [currentTrack, queue, getActiveTracks, isShuffled, playTrack]);
+  }, [currentTrack, queue, getActiveTracks, isShuffled, repeatMode, playTrack]);
 
   const handlePrev = useCallback(() => {
     if (!currentTrack) return;
@@ -207,7 +211,7 @@ export function usePlayback({
       // Ignore if a manual seek occurred within the last 1 second to allow seeking near the end
       const isRecentlySeeking = Date.now() - lastSeekTimeRef.current < 1000;
       if (duration > 0 && curTime >= duration && !isRecentlySeeking && !autoAdvancedRef.current) {
-        if (isLooping) {
+        if (repeatMode === "one") {
           // Repeat current song instead of advancing
           lastSeekTimeRef.current = Date.now();
           audioRef.current.currentTime = 0;
@@ -224,7 +228,7 @@ export function usePlayback({
         handleNext();
       }
     }
-  }, [currentTrack, duration, handleNext, isLooping, onTrackPlayed]);
+  }, [currentTrack, duration, handleNext, repeatMode, onTrackPlayed]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (audioRef.current) {
@@ -237,9 +241,9 @@ export function usePlayback({
   }, []);
 
   const handleAudioEnded = useCallback(() => {
-    if (isLooping) return; // native loop / seek-restart handles single-track repeat
+    if (repeatMode === "one") return; // native loop / seek-restart handles single-track repeat
     handleNext();
-  }, [handleNext, isLooping]);
+  }, [handleNext, repeatMode]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -496,7 +500,7 @@ export function usePlayback({
     duration,
     volume,
     isMuted,
-    isLooping,
+    repeatMode,
     isShuffled,
     playbackError,
     resolvedAudioUrl,
@@ -505,7 +509,7 @@ export function usePlayback({
     audioRef,
     setPlaybackError,
     setIsShuffled,
-    setIsLooping,
+    setRepeatMode,
     playTrack,
     togglePlay,
     handleVolumeChange,

@@ -5,7 +5,7 @@ interface UsePlayerShortcutsArgs {
   enabled: boolean;
   currentTrack: Track | null;
   isShuffled: boolean;
-  isLooping: boolean;
+  repeatMode: "none" | "all" | "one";
   togglePlay: () => void;
   handleNext: () => void;
   handlePrev: () => void;
@@ -13,7 +13,7 @@ interface UsePlayerShortcutsArgs {
   adjustVolume: (delta: number) => void;
   toggleMute: () => void;
   setIsShuffled: (shuffled: boolean) => void;
-  setIsLooping: (looping: boolean) => void;
+  setRepeatMode: (mode: "none" | "all" | "one") => void;
   toggleFavorite: (track: Track) => void;
 }
 
@@ -29,7 +29,7 @@ export function usePlayerShortcuts({
   enabled,
   currentTrack,
   isShuffled,
-  isLooping,
+  repeatMode,
   togglePlay,
   handleNext,
   handlePrev,
@@ -37,7 +37,7 @@ export function usePlayerShortcuts({
   adjustVolume,
   toggleMute,
   setIsShuffled,
-  setIsLooping,
+  setRepeatMode,
   toggleFavorite,
 }: UsePlayerShortcutsArgs) {
   useEffect(() => {
@@ -104,7 +104,9 @@ export function usePlayerShortcuts({
 
       if (key === "r" || key === "R") {
         e.preventDefault();
-        setIsLooping(!isLooping);
+        const modes: ("none" | "all" | "one")[] = ["none", "all", "one"];
+        const nextMode = modes[(modes.indexOf(repeatMode) + 1) % modes.length];
+        setRepeatMode(nextMode);
       }
     };
 
@@ -114,7 +116,7 @@ export function usePlayerShortcuts({
     enabled,
     currentTrack,
     isShuffled,
-    isLooping,
+    repeatMode,
     togglePlay,
     handleNext,
     handlePrev,
@@ -122,7 +124,7 @@ export function usePlayerShortcuts({
     adjustVolume,
     toggleMute,
     setIsShuffled,
-    setIsLooping,
+    setRepeatMode,
     toggleFavorite,
   ]);
 }

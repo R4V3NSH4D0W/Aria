@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, VolumeX, Volume2, Plus, MessageSquareText } from "lucide-react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -7,7 +7,7 @@ interface PlayerProps {
   currentTrack: Track;
   isPlaying: boolean;
   isShuffled: boolean;
-  isLooping: boolean;
+  repeatMode: "none" | "all" | "one";
   isMuted: boolean;
   progress: number;
   duration: number;
@@ -18,7 +18,7 @@ interface PlayerProps {
   toggleFavorite: (track: Track) => void;
   isFavorite: (track: Track) => boolean;
   setIsShuffled: (shuffled: boolean) => void;
-  setIsLooping: (looping: boolean) => void;
+  setRepeatMode: (mode: "none" | "all" | "one") => void;
   handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleNext: () => void;
@@ -35,7 +35,7 @@ export const Player: React.FC<PlayerProps> = ({
   currentTrack,
   isPlaying,
   isShuffled,
-  isLooping,
+  repeatMode,
   isMuted,
   progress,
   duration,
@@ -46,7 +46,7 @@ export const Player: React.FC<PlayerProps> = ({
   toggleFavorite,
   isFavorite,
   setIsShuffled,
-  setIsLooping,
+  setRepeatMode,
   handleSeek,
   handleVolumeChange,
   handleNext,
@@ -211,12 +211,27 @@ export const Player: React.FC<PlayerProps> = ({
           </button>
 
           <button
-            onClick={() => setIsLooping(!isLooping)}
+            onClick={() => {
+              const modes: ("none" | "all" | "one")[] = ["none", "all", "one"];
+              const nextMode = modes[(modes.indexOf(repeatMode) + 1) % modes.length];
+              setRepeatMode(nextMode);
+            }}
             className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-              isLooping ? "text-indigo-400" : "text-slate-500 hover:text-slate-300"
+              repeatMode !== "none" ? "text-indigo-400" : "text-slate-500 hover:text-slate-300"
             }`}
+            title={
+              repeatMode === "none"
+                ? "Repeat: Off"
+                : repeatMode === "all"
+                ? "Repeat: All"
+                : "Repeat: One"
+            }
           >
-            <Repeat className="w-3.5 h-3.5 lg:w-4 h-4" />
+            {repeatMode === "one" ? (
+              <Repeat1 className="w-3.5 h-3.5 lg:w-4 h-4" />
+            ) : (
+              <Repeat className="w-3.5 h-3.5 lg:w-4 h-4" />
+            )}
           </button>
         </div>
 
