@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText, Moon, Minimize2 } from "lucide-react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText, Moon, Minimize2, LayoutGrid } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -286,123 +286,134 @@ export const Player: React.FC<PlayerProps> = ({
 
       {/* Right: Volume & Extra Controls */}
       <div className="flex items-center gap-2 lg:gap-3 w-1/3 min-w-[80px] max-w-[200px] justify-end shrink-0">
-        {/* Sleep Timer */}
-        <div className="relative" ref={sleepMenuRef}>
-          <button
-            onClick={() => setSleepMenuOpen(!sleepMenuOpen)}
-            className={`p-2 transition-all cursor-pointer flex items-center gap-1 ${
-              sleepTimerTimeLeft !== null || sleepAtTrackEnd
-                ? "text-indigo-400 font-bold"
-                : "text-slate-400 hover:text-white"
-            }`}
-            title="Sleep timer"
-          >
-            <Moon className={`w-4.5 h-4.5 lg:w-5 h-5 ${sleepTimerTimeLeft !== null || sleepAtTrackEnd ? "fill-current" : ""}`} />
-            {(sleepTimerTimeLeft !== null || sleepAtTrackEnd) && (
-              <span className="text-[10px] font-mono select-none">
-                {sleepAtTrackEnd ? "End" : formatTime(sleepTimerTimeLeft || 0)}
-              </span>
-            )}
+        
+        {/* Utility Toolbox: Sleep Timer & Mini Mode (Hover Reveal) */}
+        <div className="relative flex items-center group/tools py-2">
+          <button className="p-2 text-slate-400 hover:text-white transition-all cursor-pointer">
+            <LayoutGrid className="w-4.5 h-4.5 lg:w-5 h-5" />
           </button>
-
-          {sleepMenuOpen && (
-            <div className="absolute bottom-full right-0 mb-3 w-48 bg-[#0e1015]/95 backdrop-blur-2xl border border-white/10 rounded-2xl py-2 shadow-2xl z-50 animate-fade-in flex flex-col">
-              <span className="px-4 py-1.5 text-[10px] font-bold text-slate-500 tracking-wider uppercase border-b border-white/5 mb-1">
-                Sleep Timer
-              </span>
-              
+          
+          <div className="absolute bottom-full right-0 mb-2 bg-[#0e1015]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl opacity-0 scale-90 pointer-events-none group-hover/tools:opacity-100 group-hover/tools:scale-100 group-hover/tools:pointer-events-auto transition-all duration-200 z-50">
+            {/* Sleep Timer */}
+            <div className="relative" ref={sleepMenuRef}>
               <button
-                onClick={() => {
-                  setSleepTimerTimeLeft(null);
-                  setSleepAtTrackEnd(false);
-                  setSleepMenuOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
-                  sleepTimerTimeLeft === null && !sleepAtTrackEnd ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                onClick={() => setSleepMenuOpen(!sleepMenuOpen)}
+                className={`p-2 rounded-xl transition-all cursor-pointer hover:bg-white/5 flex items-center gap-1 ${
+                  sleepTimerTimeLeft !== null || sleepAtTrackEnd
+                    ? "text-indigo-400 font-bold"
+                    : "text-slate-400 hover:text-white"
                 }`}
+                title="Sleep timer"
               >
-                Off
+                <Moon className={`w-4 h-4 ${sleepTimerTimeLeft !== null || sleepAtTrackEnd ? "fill-current" : ""}`} />
+                {(sleepTimerTimeLeft !== null || sleepAtTrackEnd) && (
+                  <span className="text-[9px] font-mono select-none">
+                    {sleepAtTrackEnd ? "End" : formatTime(sleepTimerTimeLeft || 0)}
+                  </span>
+                )}
               </button>
 
-              <button
-                onClick={() => {
-                  setSleepTimerTimeLeft(15 * 60);
-                  setSleepAtTrackEnd(false);
-                  setSleepMenuOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
-                  sleepTimerTimeLeft === 15 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                15 minutes
-              </button>
+              {sleepMenuOpen && (
+                <div className="absolute bottom-full right-0 mb-2 w-48 bg-[#0e1015]/95 backdrop-blur-2xl border border-white/10 rounded-2xl py-2 shadow-2xl z-[60] flex flex-col">
+                  <span className="px-4 py-1.5 text-[10px] font-bold text-slate-500 tracking-wider uppercase border-b border-white/5 mb-1">
+                    Sleep Timer
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                      setSleepTimerTimeLeft(null);
+                      setSleepAtTrackEnd(false);
+                      setSleepMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                      sleepTimerTimeLeft === null && !sleepAtTrackEnd ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Off
+                  </button>
 
-              <button
-                onClick={() => {
-                  setSleepTimerTimeLeft(30 * 60);
-                  setSleepAtTrackEnd(false);
-                  setSleepMenuOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
-                  sleepTimerTimeLeft === 30 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                30 minutes
-              </button>
+                  <button
+                    onClick={() => {
+                      setSleepTimerTimeLeft(15 * 60);
+                      setSleepAtTrackEnd(false);
+                      setSleepMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                      sleepTimerTimeLeft === 15 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    15 minutes
+                  </button>
 
-              <button
-                onClick={() => {
-                  setSleepTimerTimeLeft(45 * 60);
-                  setSleepAtTrackEnd(false);
-                  setSleepMenuOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
-                  sleepTimerTimeLeft === 45 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                45 minutes
-              </button>
+                  <button
+                    onClick={() => {
+                      setSleepTimerTimeLeft(30 * 60);
+                      setSleepAtTrackEnd(false);
+                      setSleepMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                      sleepTimerTimeLeft === 30 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    30 minutes
+                  </button>
 
-              <button
-                onClick={() => {
-                  setSleepTimerTimeLeft(60 * 60);
-                  setSleepAtTrackEnd(false);
-                  setSleepMenuOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
-                  sleepTimerTimeLeft === 60 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                60 minutes
-              </button>
+                  <button
+                    onClick={() => {
+                      setSleepTimerTimeLeft(45 * 60);
+                      setSleepAtTrackEnd(false);
+                      setSleepMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                      sleepTimerTimeLeft === 45 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    45 minutes
+                  </button>
 
-              <button
-                onClick={() => {
-                  setSleepTimerTimeLeft(null);
-                  setSleepAtTrackEnd(true);
-                  setSleepMenuOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer border-t border-white/5 mt-1 ${
-                  sleepAtTrackEnd ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                End of current song
-              </button>
+                  <button
+                    onClick={() => {
+                      setSleepTimerTimeLeft(60 * 60);
+                      setSleepAtTrackEnd(false);
+                      setSleepMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                      sleepTimerTimeLeft === 60 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    60 minutes
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSleepTimerTimeLeft(null);
+                      setSleepAtTrackEnd(true);
+                      setSleepMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer border-t border-white/5 mt-1 ${
+                      sleepAtTrackEnd ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    End of current song
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Mini Mode */}
+            <button
+              onClick={toggleMiniMode}
+              className={`p-2 rounded-xl transition-all cursor-pointer hover:bg-white/5 ${
+                isMiniMode ? "text-indigo-400" : "text-slate-400 hover:text-white"
+              }`}
+              title="Mini Player"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Mini Mode */}
-        <button
-          onClick={toggleMiniMode}
-          className={`p-2 transition-all cursor-pointer ${
-            isMiniMode ? "text-indigo-400" : "text-slate-400 hover:text-white"
-          }`}
-          title="Mini Player"
-        >
-          <Minimize2 className="w-4.5 h-4.5 lg:w-5 h-5" />
-        </button>
-
+        {/* Lyrics */}
         <button
           onClick={() => setShowLyricsMode(!showLyricsMode)}
           className={`p-2 transition-all cursor-pointer ${
@@ -412,26 +423,35 @@ export const Player: React.FC<PlayerProps> = ({
         >
           <MessageSquareText className="w-4.5 h-4.5 lg:w-5 h-5" />
         </button>
-        <button
-          onClick={toggleMute}
-          className="p-2 text-slate-400 hover:text-white transition-all cursor-pointer"
-        >
-          {isMuted || volume === 0 ? <VolumeX className="w-4.5 h-4.5 lg:w-5 h-5" /> : <Volume2 className="w-4.5 h-4.5 lg:w-5 h-5" />}
-        </button>
-        <div className="relative w-16 lg:w-24 h-3 hidden sm:flex items-center group min-w-0">
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={isMuted ? 0 : volume}
-            onChange={handleVolumeChange}
-            style={{
-              background: `linear-gradient(to right, #6366f1 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.05) ${(isMuted ? 0 : volume) * 100}%)`
-            }}
-            className="absolute w-full h-1 rounded-full appearance-none cursor-pointer outline-none transition-all group-hover:h-1.5
-            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#818cf8] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(99,102,241,0.8)] [&::-webkit-slider-thumb]:opacity-0 group-hover:[&::-webkit-slider-thumb]:opacity-100 [&::-webkit-slider-thumb]:transition-opacity"
-          />
+
+        {/* Vertical Volume Controls (Hover Reveal) */}
+        <div className="relative flex items-center group/volume py-2">
+          <button
+            onClick={toggleMute}
+            className="p-2 text-slate-400 hover:text-white transition-all cursor-pointer"
+          >
+            {isMuted || volume === 0 ? <VolumeX className="w-4.5 h-4.5 lg:w-5 h-5" /> : <Volume2 className="w-4.5 h-4.5 lg:w-5 h-5" />}
+          </button>
+          
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-10 h-32 bg-[#0e1015]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-3 flex flex-col items-center justify-center shadow-2xl opacity-0 scale-90 pointer-events-none group-hover/volume:opacity-100 group-hover/volume:scale-100 group-hover/volume:pointer-events-auto transition-all duration-200 z-50">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={isMuted ? 0 : volume}
+              onChange={handleVolumeChange}
+              style={{
+                writingMode: "bt-lr" as any,
+                WebkitAppearance: "slider-vertical" as any,
+                background: `linear-gradient(to top, #6366f1 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.05) ${(isMuted ? 0 : volume) * 100}%)`
+              }}
+              className="h-20 w-1.5 rounded-full appearance-none cursor-pointer outline-none"
+            />
+            <span className="text-[9px] font-mono text-slate-400 mt-2 select-none">
+              {Math.round((isMuted ? 0 : volume) * 100)}%
+            </span>
+          </div>
         </div>
       </div>
     </footer>
