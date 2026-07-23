@@ -47,6 +47,7 @@ Aria is a premium desktop music player built on Tauri, React, and Rust, integrat
 *   **Dynamic Custom Wallpapers:** Configure custom background wallpaper URLs and control their opacity directly from the Settings panel.
 *   **Draggable Title Bar:** Custom window drag region matching desktop environment expectations.
 *   **Auto-Updating Sidebar:** Automatically collapses on narrow screens and expands on wide screens unless manually closed by the user.
+*   **Mini Mode (Mini Player):** Shrinks the application window down to a floating picture-in-picture window (`320x340`) set to "Always on Top" with custom simplified playback controls, window dragging, and artwork display.
 
 ---
 
