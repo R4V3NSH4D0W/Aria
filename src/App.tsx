@@ -418,124 +418,39 @@ export default function App() {
   const hasQueue = queue.length > 0;
 
   if (isMiniMode) {
-    return (
-      <main
-        className="h-screen w-screen text-slate-100 flex flex-col font-sans relative overflow-hidden select-none bg-[#0a0c10]"
-        data-tauri-drag-region
-        onMouseDown={startWindowDrag}
-      >
-        {/* Background Blurred Wallpaper */}
-        {currentTrack?.thumbnail && (
+    // We handle rendering inside the unified return below to keep the <audio> element mounted.
+  }
+
+  return (
+    <main
+      className={`h-screen w-screen text-slate-100 flex flex-col font-sans relative overflow-hidden select-none transition-colors duration-500 ${isMiniMode ? "bg-[#0a0c10]" : wallpaperUrl ? "bg-[#040506]" : "bg-[#08090a]"}`}
+      data-tauri-drag-region
+      onMouseDown={startWindowDrag}
+    >
+      {/* Background Wallpaper Layer */}
+      {isMiniMode ? (
+        currentTrack?.thumbnail && (
           <img
             src={currentTrack.thumbnail}
             alt=""
             draggable={false}
             className="absolute inset-0 h-full w-full object-cover blur-3xl scale-125 opacity-35 pointer-events-none z-0"
           />
-        )}
-
-        {/* Title bar / custom drag region */}
-        <div
-          data-tauri-drag-region
-          onMouseDown={startWindowDrag}
-          className="h-10 w-full flex items-center justify-between px-3 shrink-0 z-20 cursor-default"
-        >
-          <span className="text-[9px] uppercase tracking-widest text-slate-500 font-bold font-mono">
-            Aria Mini
-          </span>
-          <button
-            onClick={toggleMiniMode}
-            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-            title="Exit Mini Mode"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Mini Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 z-10 min-h-0 text-center gap-3">
-          {currentTrack ? (
-            <>
-              {/* Cover Art */}
-              <div className="w-24 h-24 rounded-2xl overflow-hidden relative shadow-2xl border border-white/10 shrink-0">
-                <img
-                  src={currentTrack.thumbnail}
-                  alt={currentTrack.title}
-                  className="w-full h-full object-cover"
-                />
-                {currentTrack.isResolving && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  </div>
-                )}
-              </div>
-
-              {/* Title & Artist */}
-              <div className="w-full overflow-hidden px-2">
-                <h3 className="font-semibold text-xs text-slate-200 truncate select-text">
-                  {currentTrack.title}
-                </h3>
-                <p className="text-[10px] text-slate-500 truncate mt-0.5 select-text">
-                  {currentTrack.uploaderName}
-                </p>
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center gap-4 mt-0.5">
-                <button
-                  onClick={handlePrev}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
-                  title="Previous"
-                >
-                  <SkipBack className="w-4 h-4 fill-slate-400 hover:fill-white" />
-                </button>
-
-                <button
-                  onClick={togglePlay}
-                  className="w-9 h-9 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 shrink-0"
-                  title={isPlaying ? "Pause" : "Play"}
-                >
-                  {isPlaying ? (
-                    <Pause className="w-3.5 h-3.5 fill-slate-900" />
-                  ) : (
-                    <Play className="w-3.5 h-3.5 fill-slate-900 translate-x-0.5" />
-                  )}
-                </button>
-
-                <button
-                  onClick={handleNext}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
-                  title="Next"
-                >
-                  <SkipForward className="w-4 h-4 fill-slate-400 hover:fill-white" />
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="text-slate-500 text-xs py-8">No track playing</div>
-          )}
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main
-      className={`h-screen w-screen text-slate-100 flex flex-col font-sans relative overflow-hidden select-none transition-colors duration-500 ${wallpaperUrl ? "bg-[#040506]" : "bg-[#08090a]"}`}
-    >
-      {/* Background Wallpaper Layer */}
-      {wallpaperUrl && (
-        <img
-          src={wallpaperUrl}
-          alt=""
-          draggable={false}
-          referrerPolicy="no-referrer"
-          className="absolute inset-0 h-full w-full object-cover pointer-events-none z-0 transition-opacity duration-500"
-          style={{ opacity: wallpaperOpacity }}
-        />
+        )
+      ) : (
+        wallpaperUrl && (
+          <img
+            src={wallpaperUrl}
+            alt=""
+            draggable={false}
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 h-full w-full object-cover pointer-events-none z-0 transition-opacity duration-500"
+            style={{ opacity: wallpaperOpacity }}
+          />
+        )
       )}
 
-      {/* Hidden HTML5 Audio Element */}
+      {/* Hidden HTML5 Audio Element (Always Mounted) */}
       <audio
         ref={audioRef}
         src={resolvedAudioUrl || undefined}
@@ -546,305 +461,393 @@ export default function App() {
         loop={repeatMode === "one"}
       />
 
-      <div
-        data-tauri-drag-region
-        onMouseDown={startWindowDrag}
-        className="h-11 w-full shrink-0 z-50 cursor-default"
-      />
-
-      {!isOnline && (
-        <div className="mx-6 mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-inner z-20 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>You are offline. Reconnect to search and stream tracks.</span>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 transition-all cursor-pointer border border-amber-500/30"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-1 overflow-hidden z-10">
-        <Sidebar
-          activeTab={
-            selectedArtist || artistLoading ? "artist-profile" : activeTab
-          }
-          setActiveTab={handleTabChange}
-          playlists={playlists}
-          deletePlaylist={(id, e) => {
-            deletePlaylist(id, e);
-            setSelectedArtist(null);
-          }}
-          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-          hasPlayer={!!currentTrack}
-          isOpen={isSidebarOpen}
-          favoriteArtists={favoriteArtists}
-          loadArtist={loadArtist}
-        />
-
-        {/* Main Content Area */}
-        <section
-          className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? "pb-36" : ""}`}
-        >
-          <Header
-            activeTab={
-              selectedArtist || artistLoading ? "artist-profile" : activeTab
-            }
-            playlists={playlists}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            handleSearch={handleSearch}
-            favoriteSort={favoriteSort}
-            setFavoriteSort={setFavoriteSort}
-            isSidebarOpen={isSidebarOpen}
-            toggleSidebar={toggleSidebar}
-            onOpenSettings={() => setActiveTab("settings")}
-            ytPlaylists={ytPlaylists}
-            savedRadios={savedRadios}
-            hasUpdate={hasUpdate}
-          />
-
+      {isMiniMode ? (
+        <>
+          {/* Title bar / custom drag region */}
           <div
-            className={`p-6 flex-1 grid grid-cols-1 gap-6 items-stretch ${
-              hasQueue ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1"
-            }`}
+            data-tauri-drag-region
+            onMouseDown={startWindowDrag}
+            className="h-10 w-full flex items-center justify-between px-3 shrink-0 z-20 cursor-default"
           >
-            {/* Connection mode / alert toast */}
-            <div className="lg:col-span-1 min-w-0 flex flex-col gap-6 h-full">
-              {artistLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                  <div className="w-10 h-10 border-2 border-white/10 border-t-indigo-500 rounded-full animate-spin -translate-y-5" />
-                  <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
-                    Loading Artist Profile...
+            <span className="text-[9px] uppercase tracking-widest text-slate-500 font-bold font-mono">
+              Aria Mini
+            </span>
+            <button
+              onClick={toggleMiniMode}
+              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+              title="Exit Mini Mode"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Mini Content */}
+          <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 z-10 min-h-0 text-center gap-3">
+            {currentTrack ? (
+              <>
+                {/* Cover Art */}
+                <div className="w-24 h-24 rounded-2xl overflow-hidden relative shadow-2xl border border-white/10 shrink-0">
+                  <img
+                    src={currentTrack.thumbnail}
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover"
+                  />
+                  {currentTrack.isResolving && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Title & Artist */}
+                <div className="w-full overflow-hidden px-2">
+                  <h3 className="font-semibold text-xs text-slate-200 truncate select-text">
+                    {currentTrack.title}
+                  </h3>
+                  <p className="text-[10px] text-slate-500 truncate mt-0.5 select-text">
+                    {currentTrack.uploaderName}
                   </p>
                 </div>
-              ) : selectedArtist ? (
-                <ArtistDetailsView
-                  artist={selectedArtist}
-                  onBack={() => setSelectedArtist(null)}
-                  playSongs={playSongs}
-                  playTrack={playTrack}
-                  isPlaying={isPlaying}
-                  currentTrack={currentTrack}
-                  activeDropdownTrackId={activeDropdownTrackId}
-                  setActiveDropdownTrackId={setActiveDropdownTrackId}
-                  playlists={playlists}
-                  addTrackToPlaylist={addTrackToPlaylist}
-                  addTrackToQueue={addTrackToQueue}
-                  toggleFavorite={toggleFavorite}
-                  isFavorite={isFavorite}
-                  setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-                  loadArtist={loadArtist}
-                  favoriteArtists={favoriteArtists}
-                  toggleFavoriteArtist={toggleFavoriteArtist}
-                />
-              ) : activeTab === "home" ? (
-                <Home
-                  playSongs={playSongs}
-                  currentTrack={currentTrack}
-                  isPlaying={isPlaying}
-                  favorites={favorites}
-                  playlists={playlists}
-                  ytPlaylists={ytPlaylists}
-                  recentlyPlayed={recentlyPlayed}
-                  onOpenTab={setActiveTab}
-                  onExploreGenre={handleExploreGenre}
-                  sections={homeSections}
-                  loading={homeLoading}
-                  error={homeError}
-                  fetchHome={fetchHome}
-                  communityPlaylists={communityPlaylists}
-                  communityLoading={communityLoading}
-                  fetchExplore={fetchExplore}
-                  subscriptionMix={subscriptionMix}
-                />
-              ) : activeTab === "settings" ? (
-                <Settings
-                  onPlaylistsSync={setYtPlaylists}
-                  wallpaperUrl={wallpaperUrl}
-                  setWallpaperUrl={setWallpaperUrl}
-                  wallpaperOpacity={wallpaperOpacity}
-                  setWallpaperOpacity={setWallpaperOpacity}
-                  hasUpdate={hasUpdate}
-                  latestVersion={latestVersion}
-                  releaseBody={releaseBody}
-                />
-              ) : (
-                <>
-                  {artistError && (
-                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-3 shadow-inner">
-                      <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-                      <span>{artistError}</span>
-                    </div>
-                  )}
 
-                  {activeTab === "search" ? (
-                    <SearchView
-                      loading={loading}
-                      searchError={searchError}
-                      hasSearched={hasSearched}
-                      searchResults={searchResults}
-                      loadArtist={loadArtist}
-                      currentTrack={currentTrack}
-                      isPlaying={isPlaying}
-                      playTrack={playTrack}
-                      activeDropdownTrackId={activeDropdownTrackId}
-                      setActiveDropdownTrackId={setActiveDropdownTrackId}
-                      playlists={playlists}
-                      addTrackToPlaylist={addTrackToPlaylist}
-                      addTrackToQueue={addTrackToQueue}
-                      toggleFavorite={toggleFavorite}
-                      isFavorite={isFavorite}
-                      removeTrackFromPlaylist={removeTrackFromPlaylist}
-                      setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-                      downloads={downloads}
-                      downloadingTrackIds={downloadingTrackIds}
-                      downloadTrack={downloadTrack}
-                      deleteDownload={deleteDownload}
-                    />
-                  ) : activeTab === "yt-playlists" ? (
-                    <YtPlaylistsView
-                      ytPlaylists={ytPlaylists}
-                      onSelectPlaylist={(id) => setActiveTab(`yt:${id}`)}
-                    />
-                  ) : activeTab === "yt-radios" ? (
-                    <YtRadiosView
-                      savedRadios={savedRadios}
-                      onSelectRadio={(id, videoId) => {
-                        ytSeedVideoIdRef.current = videoId;
-                        setActiveTab(`yt:${id}`);
-                      }}
-                      onDeleteRadio={deleteSavedRadio}
-                      onRenameRadio={renameSavedRadio}
-                    />
-                  ) : activeTab === "favorite-artists" ? (
-                    <FavoriteArtistsView
-                      favoriteArtists={favoriteArtists}
-                      onSelectArtist={(id) => loadArtist(id)}
-                      onUnfavoriteArtist={toggleFavoriteArtist}
-                      onTogglePin={togglePinArtist}
-                    />
-                  ) : ytPlaylistLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                      <div className="w-10 h-10 border-2 border-white/10 border-t-violet-500 rounded-full animate-spin -translate-y-5" />
-                      <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
-                        Loading Playlist...
-                      </p>
-                    </div>
-                  ) : (
-                    <LibraryView
-                      activeTab={activeTab}
-                      tracks={getActiveTracks()}
-                      playSongs={playSongs}
-                      playTrack={playTrack}
-                      currentTrack={currentTrack}
-                      isPlaying={isPlaying}
-                      activeDropdownTrackId={activeDropdownTrackId}
-                      setActiveDropdownTrackId={setActiveDropdownTrackId}
-                      playlists={playlists}
-                      addTrackToPlaylist={addTrackToPlaylist}
-                      addTrackToQueue={addTrackToQueue}
-                      toggleFavorite={toggleFavorite}
-                      isFavorite={isFavorite}
-                      removeTrackFromPlaylist={removeTrackFromPlaylist}
-                      setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-                      loadArtist={loadArtist}
-                      downloads={downloads}
-                      downloadingTrackIds={downloadingTrackIds}
-                      downloadTrack={downloadTrack}
-                      deleteDownload={deleteDownload}
-                      onBack={
-                        activeTab.startsWith("yt:")
-                          ? activeTab.startsWith("yt:RD")
-                            ? () => setActiveTab("yt-radios")
-                            : () => setActiveTab("yt-playlists")
-                          : undefined
-                      }
-                    />
-                  )}
-                </>
-              )}
-            </div>
+                {/* Controls */}
+                <div className="flex items-center gap-4 mt-0.5">
+                  <button
+                    onClick={handlePrev}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+                    title="Previous"
+                  >
+                    <SkipBack className="w-4 h-4 fill-slate-400 hover:fill-white" />
+                  </button>
 
-            {hasQueue && (
-              <QueuePanel
-                queue={queue}
-                currentTrack={currentTrack}
-                isPlaying={isPlaying}
-                onPlayTrack={(track: Track) => playTrack(track)}
-                onMoveTrack={reorderQueue}
-                onRemoveTrack={removeFromQueue}
-                onClearQueue={clearQueue}
-              />
+                  <button
+                    onClick={togglePlay}
+                    className="w-9 h-9 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 shrink-0"
+                    title={isPlaying ? "Pause" : "Play"}
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-3.5 h-3.5 fill-slate-900" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 fill-slate-900 translate-x-0.5" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleNext}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+                    title="Next"
+                  >
+                    <SkipForward className="w-4 h-4 fill-slate-400 hover:fill-white" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-slate-500 text-xs py-8">No track playing</div>
             )}
           </div>
-        </section>
-      </div>
-
-      {/* Footer Player — hidden only in karaoke lyrics mode */}
-      {currentTrack && !(showLyricsMode && karaokeMode) && (
-        <div className="relative z-[80]">
-          <Player
-            currentTrack={currentTrack}
-            isPlaying={isPlaying}
-            isShuffled={isShuffled}
-            repeatMode={repeatMode}
-            isMuted={isMuted}
-            progress={progress}
-            duration={duration}
-            volume={volume}
-            playbackError={playbackError}
-            togglePlay={togglePlay}
-            toggleMute={toggleMute}
-            toggleFavorite={toggleFavorite}
-            isFavorite={isFavorite}
-            setIsShuffled={setIsShuffled}
-            setRepeatMode={setRepeatMode}
-            handleSeek={handleSeek}
-            handleVolumeChange={handleVolumeChange}
-            handleNext={handleNext}
-            handlePrev={handlePrev}
-            playlists={playlists}
-            addTrackToPlaylist={addTrackToPlaylist}
-            setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-            showLyricsMode={showLyricsMode}
-            setShowLyricsMode={setShowLyricsMode}
-            loadArtist={loadArtist}
-            sleepTimerTimeLeft={sleepTimerTimeLeft}
-            setSleepTimerTimeLeft={setSleepTimerTimeLeft}
-            sleepAtTrackEnd={sleepAtTrackEnd}
-            setSleepAtTrackEnd={setSleepAtTrackEnd}
-            isMiniMode={isMiniMode}
-            toggleMiniMode={toggleMiniMode}
+        </>
+      ) : (
+        <>
+          <div
+            data-tauri-drag-region
+            onMouseDown={startWindowDrag}
+            className="h-11 w-full shrink-0 z-50 cursor-default"
           />
-        </div>
-      )}
 
-      {/* Full-screen Immersive Lyrics Mode Overlay */}
-      {currentTrack && (
-        <LyricsOverlay
-          show={showLyricsMode}
-          onClose={() => setShowLyricsMode(false)}
-          currentTrack={currentTrack}
-          lyrics={lyrics}
-          lyricsLoading={lyricsLoading}
-          audioRef={audioRef}
-          karaokeMode={karaokeMode}
-          setKaraokeMode={setKaraokeMode}
-        />
-      )}
+          {!isOnline && (
+            <div className="mx-6 mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-inner z-20 backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>You are offline. Reconnect to search and stream tracks.</span>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 transition-all cursor-pointer border border-amber-500/30"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
-      {/* Create Playlist Modal */}
-      {showCreatePlaylistModal && (
-        <CreatePlaylistModal
-          newPlaylistName={newPlaylistName}
-          setNewPlaylistName={setNewPlaylistName}
-          createPlaylist={createPlaylist}
-          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
-        />
+          <div className="flex flex-1 overflow-hidden z-10">
+            <Sidebar
+              activeTab={
+                selectedArtist || artistLoading ? "artist-profile" : activeTab
+              }
+              setActiveTab={handleTabChange}
+              playlists={playlists}
+              deletePlaylist={(id, e) => {
+                deletePlaylist(id, e);
+                setSelectedArtist(null);
+              }}
+              setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+              hasPlayer={!!currentTrack}
+              isOpen={isSidebarOpen}
+              favoriteArtists={favoriteArtists}
+              loadArtist={loadArtist}
+            />
+
+            {/* Main Content Area */}
+            <section
+              className={`flex-1 flex flex-col overflow-y-auto transition-[padding] duration-500 ease-out ${currentTrack ? "pb-36" : ""}`}
+            >
+              <Header
+                activeTab={
+                  selectedArtist || artistLoading ? "artist-profile" : activeTab
+                }
+                playlists={playlists}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                handleSearch={handleSearch}
+                favoriteSort={favoriteSort}
+                setFavoriteSort={setFavoriteSort}
+                isSidebarOpen={isSidebarOpen}
+                toggleSidebar={toggleSidebar}
+                onOpenSettings={() => setActiveTab("settings")}
+                ytPlaylists={ytPlaylists}
+                savedRadios={savedRadios}
+                hasUpdate={hasUpdate}
+              />
+
+              <div
+                className={`p-6 flex-1 grid grid-cols-1 gap-6 items-stretch ${
+                  hasQueue ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1"
+                }`}
+              >
+                {/* Connection mode / alert toast */}
+                <div className="lg:col-span-1 min-w-0 flex flex-col gap-6 h-full">
+                  {artistLoading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                      <div className="w-10 h-10 border-2 border-white/10 border-t-indigo-500 rounded-full animate-spin -translate-y-5" />
+                      <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
+                        Loading Artist Profile...
+                      </p>
+                    </div>
+                  ) : selectedArtist ? (
+                    <ArtistDetailsView
+                      artist={selectedArtist}
+                      onBack={() => setSelectedArtist(null)}
+                      playSongs={playSongs}
+                      playTrack={playTrack}
+                      isPlaying={isPlaying}
+                      currentTrack={currentTrack}
+                      activeDropdownTrackId={activeDropdownTrackId}
+                      setActiveDropdownTrackId={setActiveDropdownTrackId}
+                      playlists={playlists}
+                      addTrackToPlaylist={addTrackToPlaylist}
+                      addTrackToQueue={addTrackToQueue}
+                      toggleFavorite={toggleFavorite}
+                      isFavorite={isFavorite}
+                      setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                      loadArtist={loadArtist}
+                      favoriteArtists={favoriteArtists}
+                      toggleFavoriteArtist={toggleFavoriteArtist}
+                    />
+                  ) : activeTab === "home" ? (
+                    <Home
+                      playSongs={playSongs}
+                      currentTrack={currentTrack}
+                      isPlaying={isPlaying}
+                      favorites={favorites}
+                      playlists={playlists}
+                      ytPlaylists={ytPlaylists}
+                      recentlyPlayed={recentlyPlayed}
+                      onOpenTab={setActiveTab}
+                      onExploreGenre={handleExploreGenre}
+                      sections={homeSections}
+                      loading={homeLoading}
+                      error={homeError}
+                      fetchHome={fetchHome}
+                      communityPlaylists={communityPlaylists}
+                      communityLoading={communityLoading}
+                      fetchExplore={fetchExplore}
+                      subscriptionMix={subscriptionMix}
+                    />
+                  ) : activeTab === "settings" ? (
+                    <Settings
+                      onPlaylistsSync={setYtPlaylists}
+                      wallpaperUrl={wallpaperUrl}
+                      setWallpaperUrl={setWallpaperUrl}
+                      wallpaperOpacity={wallpaperOpacity}
+                      setWallpaperOpacity={setWallpaperOpacity}
+                      hasUpdate={hasUpdate}
+                      latestVersion={latestVersion}
+                      releaseBody={releaseBody}
+                    />
+                  ) : (
+                    <>
+                      {artistError && (
+                        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-3 shadow-inner">
+                          <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                          <span>{artistError}</span>
+                        </div>
+                      )}
+
+                      {activeTab === "search" ? (
+                        <SearchView
+                          loading={loading}
+                          searchError={searchError}
+                          hasSearched={hasSearched}
+                          searchResults={searchResults}
+                          loadArtist={loadArtist}
+                          currentTrack={currentTrack}
+                          isPlaying={isPlaying}
+                          playTrack={playTrack}
+                          activeDropdownTrackId={activeDropdownTrackId}
+                          setActiveDropdownTrackId={setActiveDropdownTrackId}
+                          playlists={playlists}
+                          addTrackToPlaylist={addTrackToPlaylist}
+                          addTrackToQueue={addTrackToQueue}
+                          toggleFavorite={toggleFavorite}
+                          isFavorite={isFavorite}
+                          removeTrackFromPlaylist={removeTrackFromPlaylist}
+                          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                          downloads={downloads}
+                          downloadingTrackIds={downloadingTrackIds}
+                          downloadTrack={downloadTrack}
+                          deleteDownload={deleteDownload}
+                        />
+                      ) : activeTab === "yt-playlists" ? (
+                        <YtPlaylistsView
+                          ytPlaylists={ytPlaylists}
+                          onSelectPlaylist={(id) => setActiveTab(`yt:${id}`)}
+                        />
+                      ) : activeTab === "yt-radios" ? (
+                        <YtRadiosView
+                          savedRadios={savedRadios}
+                          onSelectRadio={(id, videoId) => {
+                            ytSeedVideoIdRef.current = videoId;
+                            setActiveTab(`yt:${id}`);
+                          }}
+                          onDeleteRadio={deleteSavedRadio}
+                          onRenameRadio={renameSavedRadio}
+                        />
+                      ) : activeTab === "favorite-artists" ? (
+                        <FavoriteArtistsView
+                          favoriteArtists={favoriteArtists}
+                          onSelectArtist={(id) => loadArtist(id)}
+                          onUnfavoriteArtist={toggleFavoriteArtist}
+                          onTogglePin={togglePinArtist}
+                        />
+                      ) : ytPlaylistLoading ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                          <div className="w-10 h-10 border-2 border-white/10 border-t-violet-500 rounded-full animate-spin -translate-y-5" />
+                          <p className="text-slate-400 text-sm animate-pulse font-medium -translate-y-5">
+                            Loading Playlist...
+                          </p>
+                        </div>
+                      ) : (
+                        <LibraryView
+                          activeTab={activeTab}
+                          tracks={getActiveTracks()}
+                          playSongs={playSongs}
+                          playTrack={playTrack}
+                          currentTrack={currentTrack}
+                          isPlaying={isPlaying}
+                          activeDropdownTrackId={activeDropdownTrackId}
+                          setActiveDropdownTrackId={setActiveDropdownTrackId}
+                          playlists={playlists}
+                          addTrackToPlaylist={addTrackToPlaylist}
+                          addTrackToQueue={addTrackToQueue}
+                          toggleFavorite={toggleFavorite}
+                          isFavorite={isFavorite}
+                          removeTrackFromPlaylist={removeTrackFromPlaylist}
+                          setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                          loadArtist={loadArtist}
+                          downloads={downloads}
+                          downloadingTrackIds={downloadingTrackIds}
+                          downloadTrack={downloadTrack}
+                          deleteDownload={deleteDownload}
+                          onBack={
+                            activeTab.startsWith("yt:")
+                              ? activeTab.startsWith("yt:RD")
+                                ? () => setActiveTab("yt-radios")
+                                : () => setActiveTab("yt-playlists")
+                              : undefined
+                          }
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {hasQueue && (
+                  <QueuePanel
+                    queue={queue}
+                    currentTrack={currentTrack}
+                    isPlaying={isPlaying}
+                    onPlayTrack={(track: Track) => playTrack(track)}
+                    onMoveTrack={reorderQueue}
+                    onRemoveTrack={removeFromQueue}
+                    onClearQueue={clearQueue}
+                  />
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Footer Player — hidden only in karaoke lyrics mode */}
+          {currentTrack && !(showLyricsMode && karaokeMode) && (
+            <div className="relative z-[80]">
+              <Player
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                isShuffled={isShuffled}
+                repeatMode={repeatMode}
+                isMuted={isMuted}
+                progress={progress}
+                duration={duration}
+                volume={volume}
+                playbackError={playbackError}
+                togglePlay={togglePlay}
+                toggleMute={toggleMute}
+                toggleFavorite={toggleFavorite}
+                isFavorite={isFavorite}
+                setIsShuffled={setIsShuffled}
+                setRepeatMode={setRepeatMode}
+                handleSeek={handleSeek}
+                handleVolumeChange={handleVolumeChange}
+                handleNext={handleNext}
+                handlePrev={handlePrev}
+                playlists={playlists}
+                addTrackToPlaylist={addTrackToPlaylist}
+                setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+                showLyricsMode={showLyricsMode}
+                setShowLyricsMode={setShowLyricsMode}
+                loadArtist={loadArtist}
+                sleepTimerTimeLeft={sleepTimerTimeLeft}
+                setSleepTimerTimeLeft={setSleepTimerTimeLeft}
+                sleepAtTrackEnd={sleepAtTrackEnd}
+                setSleepAtTrackEnd={setSleepAtTrackEnd}
+                isMiniMode={isMiniMode}
+                toggleMiniMode={toggleMiniMode}
+              />
+            </div>
+          )}
+
+          {/* Full-screen Immersive Lyrics Mode Overlay */}
+          {currentTrack && (
+            <LyricsOverlay
+              show={showLyricsMode}
+              onClose={() => setShowLyricsMode(false)}
+              currentTrack={currentTrack}
+              lyrics={lyrics}
+              lyricsLoading={lyricsLoading}
+              audioRef={audioRef}
+              karaokeMode={karaokeMode}
+              setKaraokeMode={setKaraokeMode}
+            />
+          )}
+
+          {/* Create Playlist Modal */}
+          {showCreatePlaylistModal && (
+            <CreatePlaylistModal
+              newPlaylistName={newPlaylistName}
+              setNewPlaylistName={setNewPlaylistName}
+              createPlaylist={createPlaylist}
+              setShowCreatePlaylistModal={setShowCreatePlaylistModal}
+            />
+          )}
+        </>
       )}
     </main>
   );
