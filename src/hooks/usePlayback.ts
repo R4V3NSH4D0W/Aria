@@ -30,6 +30,18 @@ export function usePlayback({
   const [sleepTimerTimeLeft, setSleepTimerTimeLeft] = useState<number | null>(null);
   const [sleepAtTrackEnd, setSleepAtTrackEnd] = useState(false);
 
+  const [eqGains, setEqGains] = useState<number[]>(() => {
+    const saved = localStorage.getItem("aria_eq_gains");
+    return saved ? JSON.parse(saved) : [0, 0, 0, 0, 0];
+  });
+  const [eqEnabled, setEqEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("aria_eq_enabled") === "true";
+  });
+  useEffect(() => {
+    localStorage.setItem("aria_eq_gains", JSON.stringify(eqGains));
+    localStorage.setItem("aria_eq_enabled", String(eqEnabled));
+  }, [eqGains, eqEnabled]);
+
   useEffect(() => {
     if (sleepTimerTimeLeft === null || sleepTimerTimeLeft <= 0 || !isPlaying) return;
 
@@ -563,5 +575,9 @@ export function usePlayback({
     setSleepTimerTimeLeft,
     sleepAtTrackEnd,
     setSleepAtTrackEnd,
+    eqGains,
+    setEqGains,
+    eqEnabled,
+    setEqEnabled,
   };
 }

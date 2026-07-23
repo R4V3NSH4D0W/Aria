@@ -154,3 +154,12 @@
 .animate-equalizer-paused .equalizer-bar {
   animation-play-state: paused;
 }
+
+/* Vinyl disk spin animations */
+.animate-vinyl-spin {
+  animation: spin 8s linear infinite;
+}
+
+.animate-vinyl-paused {
+  animation-play-state: paused;
+}

@@ -14,6 +14,8 @@ Aria is a premium desktop music player built on Tauri, React, and Rust, integrat
     *   **Repeat All (`all`):** Loops the entire active queue/playlist continuously.
     *   **Repeat One (`one`):** Continuously repeats the current track.
 *   **Sleep Timer:** Set a sleep countdown (15m, 30m, 45m, 60m) or stop playback at the **End of current song**. Displays countdown/status in the control bar.
+*   **5-Band Graphic Equalizer:** Shape sound frequencies in real-time. Features individual gain controls (-12 to +12 dB) for 60Hz, 230Hz, 910Hz, 4kHz, and 14kHz bands, with preset options (Bass Boost, Classical, Pop, Electronic, Rock, Vocal Boost, Podcast, and Custom).
+*   **Discord Rich Presence (RPC):** Show what song you are listening to on your Discord profile in real-time. Displays the track title, artist, live elapsed/remaining countdown timer, and high-quality album artwork thumbnail with automatic play/pause state synchronization.
 
 ---
 

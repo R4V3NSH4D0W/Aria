@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Cookie, Palette, Sparkles, X } from "lucide-react";
+import { Cookie, Palette, Sparkles, X, Sliders } from "lucide-react";
 import { YtPlaylist } from "../types";
 import { AccountTab } from "./settings/AccountTab";
 import { AppearanceTab } from "./settings/AppearanceTab";
+import { Equalizer } from "./Equalizer";
 
 const STORAGE_KEY = "aria_yt_cookie";
 const PLAYLISTS_KEY = "aria_yt_playlists";
@@ -18,9 +19,13 @@ interface SettingsProps {
   hasUpdate?: boolean;
   latestVersion?: string;
   releaseBody?: string;
+  eqGains: number[];
+  setEqGains: (gains: number[]) => void;
+  eqEnabled: boolean;
+  setEqEnabled: (enabled: boolean) => void;
 }
 
-type Tab = "account" | "appearance";
+type Tab = "account" | "appearance" | "equalizer";
 
 const PRESETS = [
   { url: "", preview: null },
@@ -55,6 +60,10 @@ export const Settings: React.FC<SettingsProps> = ({
   hasUpdate = false,
   latestVersion = "",
   releaseBody = "",
+  eqGains,
+  setEqGains,
+  eqEnabled,
+  setEqEnabled,
 }) => {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("account");
@@ -155,6 +164,11 @@ export const Settings: React.FC<SettingsProps> = ({
       label: "Appearance",
       icon: <Palette className="w-4 h-4" />,
     },
+    {
+      id: "equalizer",
+      label: "Equalizer",
+      icon: <Sliders className="w-4 h-4" />,
+    },
   ];
 
   return (
@@ -217,7 +231,7 @@ export const Settings: React.FC<SettingsProps> = ({
               syncing={syncing}
               syncPlaylists={syncPlaylists}
             />
-          ) : (
+          ) : activeTab === "appearance" ? (
             <AppearanceTab
               customUrl={customUrl}
               setCustomUrl={setCustomUrl}
@@ -226,6 +240,13 @@ export const Settings: React.FC<SettingsProps> = ({
               wallpaperOpacity={wallpaperOpacity}
               setWallpaperOpacity={setWallpaperOpacity}
               presets={PRESETS}
+            />
+          ) : (
+            <Equalizer
+              eqGains={eqGains}
+              setEqGains={setEqGains}
+              eqEnabled={eqEnabled}
+              setEqEnabled={setEqEnabled}
             />
           )}
         </div>

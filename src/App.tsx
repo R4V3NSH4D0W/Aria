@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { AlertCircle, WifiOff, Play, Pause, SkipBack, SkipForward, Maximize2 } from "lucide-react";
+import { AlertCircle, WifiOff } from "lucide-react";
 import { Track, FavoriteArtist } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -23,6 +23,7 @@ import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { useExplore } from "./hooks/useExplore";
 import { useYtPlaylist } from "./hooks/useYtPlaylist";
 import { YtPlaylistsView } from "./components/YtPlaylistsView";
+import { MiniPlayer } from "./components/MiniPlayer";
 import { YtRadiosView } from "./components/YtRadiosView";
 import { FavoriteArtistsView } from "./components/FavoriteArtistsView";
 import { SavedRadio } from "./types";
@@ -385,6 +386,10 @@ export default function App() {
     setSleepTimerTimeLeft,
     sleepAtTrackEnd,
     setSleepAtTrackEnd,
+    eqGains,
+    setEqGains,
+    eqEnabled,
+    setEqEnabled,
   } = usePlayback({
     getActiveTracks,
     onTrackPlayed: addToRecentlyPlayed,
@@ -462,89 +467,15 @@ export default function App() {
       />
 
       {isMiniMode ? (
-        <>
-          {/* Title bar / custom drag region */}
-          <div
-            data-tauri-drag-region
-            onMouseDown={startWindowDrag}
-            className="h-10 w-full flex items-center justify-between px-3 shrink-0 z-20 cursor-default"
-          >
-            <span className="text-[9px] uppercase tracking-widest text-slate-500 font-bold font-mono">
-              Aria Mini
-            </span>
-            <button
-              onClick={toggleMiniMode}
-              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-              title="Exit Mini Mode"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Mini Content */}
-          <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 z-10 min-h-0 text-center gap-3">
-            {currentTrack ? (
-              <>
-                {/* Cover Art */}
-                <div className="w-24 h-24 rounded-2xl overflow-hidden relative shadow-2xl border border-white/10 shrink-0">
-                  <img
-                    src={currentTrack.thumbnail}
-                    alt={currentTrack.title}
-                    className="w-full h-full object-cover"
-                  />
-                  {currentTrack.isResolving && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Title & Artist */}
-                <div className="w-full overflow-hidden px-2">
-                  <h3 className="font-semibold text-xs text-slate-200 truncate select-text">
-                    {currentTrack.title}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 truncate mt-0.5 select-text">
-                    {currentTrack.uploaderName}
-                  </p>
-                </div>
-
-                {/* Controls */}
-                <div className="flex items-center gap-4 mt-0.5">
-                  <button
-                    onClick={handlePrev}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
-                    title="Previous"
-                  >
-                    <SkipBack className="w-4 h-4 fill-slate-400 hover:fill-white" />
-                  </button>
-
-                  <button
-                    onClick={togglePlay}
-                    className="w-9 h-9 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 shrink-0"
-                    title={isPlaying ? "Pause" : "Play"}
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-3.5 h-3.5 fill-slate-900" />
-                    ) : (
-                      <Play className="w-3.5 h-3.5 fill-slate-900 translate-x-0.5" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleNext}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
-                    title="Next"
-                  >
-                    <SkipForward className="w-4 h-4 fill-slate-400 hover:fill-white" />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="text-slate-500 text-xs py-8">No track playing</div>
-            )}
-          </div>
-        </>
+        <MiniPlayer
+          currentTrack={currentTrack}
+          isPlaying={isPlaying}
+          togglePlay={togglePlay}
+          handlePrev={handlePrev}
+          handleNext={handleNext}
+          toggleMiniMode={toggleMiniMode}
+          startWindowDrag={startWindowDrag}
+        />
       ) : (
         <>
           <div
@@ -672,6 +603,10 @@ export default function App() {
                       hasUpdate={hasUpdate}
                       latestVersion={latestVersion}
                       releaseBody={releaseBody}
+                      eqGains={eqGains}
+                      setEqGains={setEqGains}
+                      eqEnabled={eqEnabled}
+                      setEqEnabled={setEqEnabled}
                     />
                   ) : (
                     <>
