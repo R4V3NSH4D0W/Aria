@@ -142,8 +142,15 @@ export function usePlayback({
     let nextIndex = currentIndex + 1;
     if (isShuffled) {
       nextIndex = Math.floor(Math.random() * playbackList.length);
-    } else if (currentIndex === -1 || nextIndex >= playbackList.length) {
-      nextIndex = 0; // Loop back to start
+    } else if (currentIndex === -1) {
+      nextIndex = 0;
+    } else if (nextIndex >= playbackList.length) {
+      // End of playlist/queue reached: stop playback
+      setIsPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      return;
     }
 
     playTrack(playbackList[nextIndex]);
