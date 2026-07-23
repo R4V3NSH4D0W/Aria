@@ -7,7 +7,7 @@ Aria is a premium desktop music player built on Tauri, React, and Rust, integrat
 ## 🎵 Core Playback & Streaming
 *   **Direct YouTube Music Streaming:** Bypasses standard streaming constraints by resolving unencrypted stream URLs directly from YouTube client endpoints via the Rust backend.
 *   **Throttling Bypass:** Downloads stream data in concurrent 1MB chunks to bypass YouTube's playback speed throttling.
-*   **Player Controls:** Play, pause, skip forward/backward, seek bar with precise time tracking, volume adjustment, and audio muting.
+*   **Player Controls:** Play, pause, skip forward/backward, seek bar with precise time tracking, mute toggle, hover-activated vertical volume slider, and expandable hover-reveal utility toolbox.
 *   **Shuffle Playback:** Randomizes the queue or active playlist.
 *   **3-State Repeat System:**
     *   **Repeat Off (`none`):** Plays through the queue/playlist and pauses at the end.
