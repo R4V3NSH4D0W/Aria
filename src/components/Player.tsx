@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText, Moon } from "lucide-react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText, Moon, Minimize2 } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -33,6 +33,8 @@ interface PlayerProps {
   setSleepTimerTimeLeft: (time: number | null) => void;
   sleepAtTrackEnd: boolean;
   setSleepAtTrackEnd: (enabled: boolean) => void;
+  isMiniMode: boolean;
+  toggleMiniMode: () => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -65,6 +67,8 @@ export const Player: React.FC<PlayerProps> = ({
   setSleepTimerTimeLeft,
   sleepAtTrackEnd,
   setSleepAtTrackEnd,
+  isMiniMode,
+  toggleMiniMode,
 }) => {
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
   const playlistMenuRef = useRef<HTMLDivElement | null>(null);
@@ -387,6 +391,17 @@ export const Player: React.FC<PlayerProps> = ({
             </div>
           )}
         </div>
+
+        {/* Mini Mode */}
+        <button
+          onClick={toggleMiniMode}
+          className={`p-2 transition-all cursor-pointer ${
+            isMiniMode ? "text-indigo-400" : "text-slate-400 hover:text-white"
+          }`}
+          title="Mini Player"
+        >
+          <Minimize2 className="w-4.5 h-4.5 lg:w-5 h-5" />
+        </button>
 
         <button
           onClick={() => setShowLyricsMode(!showLyricsMode)}
