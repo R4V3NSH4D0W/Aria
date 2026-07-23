@@ -13,6 +13,7 @@ Aria is a premium desktop music player built on Tauri, React, and Rust, integrat
     *   **Repeat Off (`none`):** Plays through the queue/playlist and pauses at the end.
     *   **Repeat All (`all`):** Loops the entire active queue/playlist continuously.
     *   **Repeat One (`one`):** Continuously repeats the current track.
+*   **Sleep Timer:** Set a sleep countdown (15m, 30m, 45m, 60m) or stop playback at the **End of current song**. Displays countdown/status in the control bar.
 
 ---
 
