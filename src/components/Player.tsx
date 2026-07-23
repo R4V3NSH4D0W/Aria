@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText } from "lucide-react";
+import { Loader2, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Repeat1, VolumeX, Volume2, Plus, MessageSquareText, Moon } from "lucide-react";
 import { Track, Playlist } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -29,6 +29,10 @@ interface PlayerProps {
   showLyricsMode: boolean;
   setShowLyricsMode: (show: boolean) => void;
   loadArtist?: (browseId: string) => void;
+  sleepTimerTimeLeft: number | null;
+  setSleepTimerTimeLeft: (time: number | null) => void;
+  sleepAtTrackEnd: boolean;
+  setSleepAtTrackEnd: (enabled: boolean) => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -57,14 +61,23 @@ export const Player: React.FC<PlayerProps> = ({
   showLyricsMode,
   setShowLyricsMode,
   loadArtist,
+  sleepTimerTimeLeft,
+  setSleepTimerTimeLeft,
+  sleepAtTrackEnd,
+  setSleepAtTrackEnd,
 }) => {
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false);
   const playlistMenuRef = useRef<HTMLDivElement | null>(null);
+  const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
+  const sleepMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (playlistMenuRef.current && !playlistMenuRef.current.contains(e.target as Node)) {
         setPlaylistMenuOpen(false);
+      }
+      if (sleepMenuRef.current && !sleepMenuRef.current.contains(e.target as Node)) {
+        setSleepMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -269,6 +282,112 @@ export const Player: React.FC<PlayerProps> = ({
 
       {/* Right: Volume & Extra Controls */}
       <div className="flex items-center gap-2 lg:gap-3 w-1/3 min-w-[80px] max-w-[200px] justify-end shrink-0">
+        {/* Sleep Timer */}
+        <div className="relative" ref={sleepMenuRef}>
+          <button
+            onClick={() => setSleepMenuOpen(!sleepMenuOpen)}
+            className={`p-2 transition-all cursor-pointer flex items-center gap-1 ${
+              sleepTimerTimeLeft !== null || sleepAtTrackEnd
+                ? "text-indigo-400 font-bold"
+                : "text-slate-400 hover:text-white"
+            }`}
+            title="Sleep timer"
+          >
+            <Moon className={`w-4.5 h-4.5 lg:w-5 h-5 ${sleepTimerTimeLeft !== null || sleepAtTrackEnd ? "fill-current" : ""}`} />
+            {(sleepTimerTimeLeft !== null || sleepAtTrackEnd) && (
+              <span className="text-[10px] font-mono select-none">
+                {sleepAtTrackEnd ? "End" : formatTime(sleepTimerTimeLeft || 0)}
+              </span>
+            )}
+          </button>
+
+          {sleepMenuOpen && (
+            <div className="absolute bottom-full right-0 mb-3 w-48 bg-[#0e1015]/95 backdrop-blur-2xl border border-white/10 rounded-2xl py-2 shadow-2xl z-50 animate-fade-in flex flex-col">
+              <span className="px-4 py-1.5 text-[10px] font-bold text-slate-500 tracking-wider uppercase border-b border-white/5 mb-1">
+                Sleep Timer
+              </span>
+              
+              <button
+                onClick={() => {
+                  setSleepTimerTimeLeft(null);
+                  setSleepAtTrackEnd(false);
+                  setSleepMenuOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                  sleepTimerTimeLeft === null && !sleepAtTrackEnd ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Off
+              </button>
+
+              <button
+                onClick={() => {
+                  setSleepTimerTimeLeft(15 * 60);
+                  setSleepAtTrackEnd(false);
+                  setSleepMenuOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                  sleepTimerTimeLeft === 15 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                15 minutes
+              </button>
+
+              <button
+                onClick={() => {
+                  setSleepTimerTimeLeft(30 * 60);
+                  setSleepAtTrackEnd(false);
+                  setSleepMenuOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                  sleepTimerTimeLeft === 30 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                30 minutes
+              </button>
+
+              <button
+                onClick={() => {
+                  setSleepTimerTimeLeft(45 * 60);
+                  setSleepAtTrackEnd(false);
+                  setSleepMenuOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                  sleepTimerTimeLeft === 45 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                45 minutes
+              </button>
+
+              <button
+                onClick={() => {
+                  setSleepTimerTimeLeft(60 * 60);
+                  setSleepAtTrackEnd(false);
+                  setSleepMenuOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer ${
+                  sleepTimerTimeLeft === 60 * 60 ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                60 minutes
+              </button>
+
+              <button
+                onClick={() => {
+                  setSleepTimerTimeLeft(null);
+                  setSleepAtTrackEnd(true);
+                  setSleepMenuOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-xs transition-all hover:bg-white/5 cursor-pointer border-t border-white/5 mt-1 ${
+                  sleepAtTrackEnd ? "text-indigo-400 font-semibold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                End of current song
+              </button>
+            </div>
+          )}
+        </div>
+
         <button
           onClick={() => setShowLyricsMode(!showLyricsMode)}
           className={`p-2 transition-all cursor-pointer ${

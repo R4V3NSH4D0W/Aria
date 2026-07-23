@@ -361,6 +361,10 @@ export default function App() {
     handleTimeUpdate,
     handleLoadedMetadata,
     handleAudioEnded,
+    sleepTimerTimeLeft,
+    setSleepTimerTimeLeft,
+    sleepAtTrackEnd,
+    setSleepAtTrackEnd,
   } = usePlayback({
     getActiveTracks,
     onTrackPlayed: addToRecentlyPlayed,
@@ -687,6 +691,10 @@ export default function App() {
             showLyricsMode={showLyricsMode}
             setShowLyricsMode={setShowLyricsMode}
             loadArtist={loadArtist}
+            sleepTimerTimeLeft={sleepTimerTimeLeft}
+            setSleepTimerTimeLeft={setSleepTimerTimeLeft}
+            sleepAtTrackEnd={sleepAtTrackEnd}
+            setSleepAtTrackEnd={setSleepAtTrackEnd}
           />
         </div>
       )}

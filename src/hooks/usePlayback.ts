@@ -27,6 +27,29 @@ export function usePlayback({
   const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string | null>(null);
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [lyricsLoading, setLyricsLoading] = useState(false);
+  const [sleepTimerTimeLeft, setSleepTimerTimeLeft] = useState<number | null>(null);
+  const [sleepAtTrackEnd, setSleepAtTrackEnd] = useState(false);
+
+  useEffect(() => {
+    if (sleepTimerTimeLeft === null || sleepTimerTimeLeft <= 0 || !isPlaying) return;
+
+    const interval = setInterval(() => {
+      setSleepTimerTimeLeft((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+          setIsPlaying(false);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sleepTimerTimeLeft, isPlaying]);
 
   // Audio & Playback Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -132,6 +155,15 @@ export function usePlayback({
   const handleNext = useCallback(() => {
     if (!currentTrack) return;
 
+    if (sleepAtTrackEnd) {
+      setSleepAtTrackEnd(false);
+      setIsPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      return;
+    }
+
     const playbackList = queue.length > 0 ? queue : getActiveTracks();
     if (playbackList.length === 0) return;
 
@@ -158,7 +190,7 @@ export function usePlayback({
     }
 
     playTrack(playbackList[nextIndex]);
-  }, [currentTrack, queue, getActiveTracks, isShuffled, repeatMode, playTrack]);
+  }, [currentTrack, queue, getActiveTracks, isShuffled, repeatMode, sleepAtTrackEnd, playTrack]);
 
   const handlePrev = useCallback(() => {
     if (!currentTrack) return;
@@ -527,5 +559,9 @@ export function usePlayback({
     handleTimeUpdate,
     handleLoadedMetadata,
     handleAudioEnded,
+    sleepTimerTimeLeft,
+    setSleepTimerTimeLeft,
+    sleepAtTrackEnd,
+    setSleepAtTrackEnd,
   };
 }
